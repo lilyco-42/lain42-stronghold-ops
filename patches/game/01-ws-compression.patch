@@ -1,0 +1,21 @@
+diff --git a/server/index.js b/server/index.js
+index 52c0172..d154c56 100644
+--- a/server/index.js
++++ b/server/index.js
+@@ -610,7 +610,15 @@ export async function startServer(opts = {}) {
+     } catch { /* ignore */ }
+   });
+ 
+-  const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_PAYLOAD, perMessageDeflate: false, clientTracking: false });
++  // lain42: 出口带宽只有 3 Mbps，游戏状态流（JSON 文本）占了 76%。开 deflate 可压掉 70%+。
++  // threshold 512：小于 512B 的消息不压（避免小包反而变大）；level 1：拿 CPU 换速度。
++  const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_PAYLOAD, clientTracking: false,
++    perMessageDeflate: {
++      threshold: 512,
++      zlibDeflateOptions: { level: 1, memLevel: 7 },
++      serverNoContextTakeover: true,
++      clientNoContextTakeover: true,
++    } });
+   wss.on('connection', (ws, req) => network.handleConnection(ws, req));
+   wss.on('error', (e) => log.error('[ws] server error', e));
+ 

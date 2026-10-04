@@ -1,0 +1,8 @@
+# 抓包/基准的中间产物，不入库
+ws-frames.json
+*.pcap
+*.tar.gz
+
+# 备份
+*.bak-*
+*.orig-*

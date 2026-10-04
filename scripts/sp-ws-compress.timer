@@ -1,0 +1,13 @@
+[Unit]
+Description=每 5 分钟检查一次：没人玩就开 WebSocket 压缩
+
+[Timer]
+# 开机 5 分钟后开始查，之后每 5 分钟一次。
+# 脚本自己判断「后端连接数是否为 0」，不是 0 就静默退出。
+OnBootSec=5min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Unit=sp-ws-compress.service
+
+[Install]
+WantedBy=timers.target

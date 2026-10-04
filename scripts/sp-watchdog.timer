@@ -1,0 +1,12 @@
+[Unit]
+Description=每分钟跑一次 sp-watchdog（自检/自愈）
+
+[Timer]
+# 开机 90 秒后先跑一次，之后每 60 秒一次
+OnBootSec=90s
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=sp-watchdog.service
+
+[Install]
+WantedBy=timers.target

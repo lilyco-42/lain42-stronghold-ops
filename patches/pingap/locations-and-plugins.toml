@@ -1,0 +1,69 @@
+# pingap 配置增量（相对原 /etc/pingap.toml）
+#
+# 有两处新增。都不是"重启才能生效"—— pingap 用 --autoreload 启动，
+# 改完文件它会自己加载（日志里能看到 `++ [ADDED] location:xxx`）。
+# 改完务必先校验：pingap -c /etc/pingap.toml -t
+#
+# 顺序有讲究：locations 的匹配是「列表里靠前的先匹配」，
+# 所以 sp_data / sp_sim 必须排在 sp（path = "/"）**之前**。
+
+
+# ============================================================
+# 1) /data —— 给游戏数据 JSON 加压缩
+# ============================================================
+# 起因：data/assets.json 有 890 KB，走服务器出口（当时只有 ~590 KB/s），
+#       实测被挤到 81 KB/s → 要下 10.9 秒。而前端写死
+#       `withTimeout(assets.ready(), 4000)` —— 4 秒超时 → 必然降级 2D。
+# 效果：890 KB → 61 KB，10.87s → 0.02s。
+#
+# 复用已有的 api_static_compress 插件（br_level=5 / gzip_level=6 / min_length=1024）。
+
+[locations.sp_data]
+enable_reverse_proxy_headers = true
+host = "sp.lain42.top"
+path = "/data"
+upstream = "stronghold_backend"
+plugins = ["api_static_compress"]
+
+
+# ============================================================
+# 2) /sim —— 给 sim 模块加压缩 + CORS
+# ============================================================
+# 起因：静态资源（js/css/vendor/fonts/shared）搬到 OSS 后，OSS 上的模块要用
+#       `import('/sim/spec.js')` 动态导入 sim。动态 import 相对「模块自身 URL」
+#       解析，会落到 OSS 的域名根，所以 runner.js 里把 base 改成了服务器绝对地址。
+#       但那是**跨域** ESM 导入 —— 服务器必须返回 Access-Control-Allow-Origin，
+#       而 stronghold 一个 CORS 头都不返回，只能在这里补。
+#
+# 为什么 /sim 不跟其他静态资源一起搬走：
+#   它的内部引用（如 sim/content/bands/meta.js 里的 '../../../../shared/constants.js'）
+#   依赖「在根处被钳制」才指向 /shared。放到任何 URL 前缀下都会解析错，
+#   而且 sim 目录深度不一致（1~3 层），没法用统一的相对路径绕开。
+
+[plugins.sp_sim_cors]
+category = "response_headers"
+set_headers = ["Access-Control-Allow-Origin: *"]
+
+[locations.sp_sim]
+enable_reverse_proxy_headers = true
+host = "sp.lain42.top"
+path = "/sim"
+upstream = "stronghold_backend"
+plugins = ["api_static_compress", "sp_sim_cors"]
+
+
+# ============================================================
+# 3) 必须把新 location 注册进 servers.https.locations
+# ============================================================
+# 加在 "sp" 之前（顺序 = 优先级）：
+#
+# [servers.https]
+# ...
+# locations = [
+#     ...
+#     "sp_data",
+#     "sp_sim",        <-- 新增
+#     "sp",
+#     "sp_ws",
+#     ...
+# ]

@@ -1,0 +1,15 @@
+diff --git a/public/js/assets.js b/public/js/assets.js
+index cebbf08..e8ce0ce 100644
+--- a/public/js/assets.js
++++ b/public/js/assets.js
+@@ -198,7 +198,9 @@ export function hasBackSpine(m, id) {
+ }
+ 
+ export function validSpine(sp) {
+-  return isObj(sp) && typeof sp.skel === 'string' && /^\/[^\s]*\.skel$/.test(sp.skel) && typeof sp.atlas === 'string' && isObj(sp.anims);
++  // skel may be a site-relative path (/assets/…) or an absolute http(s) URL when the manifest points
++  // at a CDN host (media.js documents that case); both are accepted, anything else is not a spine.
++  return isObj(sp) && typeof sp.skel === 'string' && /^(?:https?:\/\/|\/)[^\s]*\.skel$/.test(sp.skel) && typeof sp.atlas === 'string' && isObj(sp.anims);
+ }
+ 
+ /** Best 2D picture for a unit asset id (operator avatar, token avatar, enemy icon, item icon). */

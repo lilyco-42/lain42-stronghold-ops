@@ -1,0 +1,11 @@
+[Unit]
+Description=等没人在线时给 stronghold 开 WebSocket 压缩（一次性）
+Documentation=https://github.com/lilyco-42/StrongholdProtocolClient
+After=network-online.target stronghold.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sp-apply-ws-compress.sh
+TimeoutStartSec=120
+Nice=10
+IOSchedulingClass=idle

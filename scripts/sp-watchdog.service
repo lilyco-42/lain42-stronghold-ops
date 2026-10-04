@@ -1,0 +1,13 @@
+[Unit]
+Description=卫戍协议服务器自检/自愈（pingap FD、上游熔断、内存、tmpfs）
+Documentation=https://github.com/lilyco-42/StrongholdProtocolClient
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sp-watchdog.sh
+# 只做只读探测 + 两个幂等修复动作（prlimit / touch 配置），占用极小
+Nice=10
+IOSchedulingClass=idle
+MemoryMax=96M
+TimeoutStartSec=60
