@@ -94,14 +94,16 @@ scripts/
   sp-apply-ws-compress.sh + .service + .timer 等没人在线时自动开 WS 压缩
   prof-stronghold.mjs / analyze-prof.mjs / close-inspector.mjs
                             给运行中的 Node 做 CPU profile（kill -USR1，不重启）
+  test-delta-e2e.mjs         增量编码端到端测试（6 组：稳态/中途加入/重连/丢帧/边界/CPU）
   cpu-measure.sh / status-report.sh           只读体检
 
 docs/
   01-fd-exhaustion.md        事故复盘：503 的完整因果链
   02-ws-compression.md       压缩选型与实测（含 CPU 代价分析）
   03-static-to-oss.md        静态搬迁：三个必踩的坑
-  04-measurements.md         编码 / 协议 / 语言的本地基准测试
+  04-measurements.md         编码 / 协议 / 语言的本地基准测试（含 CPU profile 归因）
   05-missing-assets.md       补齐上游缺失素材（含上游来源映射表）
+  06-delta-encoding.md       增量编码端到端验证（6/6 通过，再省 58% 带宽）
 ```
 
 ## 部署顺序（重要）
