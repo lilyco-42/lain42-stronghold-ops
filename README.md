@@ -50,6 +50,7 @@
 | 10 | 补 17 个缺失素材 | `public/assets/**` | 数据 | boss 从菱形占位符 → 正常渲染 |
 | 11 | 表情素材 + 清单 | `public/assets/local/**` + `data/local-assets.json` | 数据 | 交流面板从空框 → 6 套官方表情 |
 | 12 | **自愈 watchdog** | `sp-watchdog.{sh,service,timer}` | 服务 | FD 自动提升 / 熔断自动复位 |
+| 13 | **Spine 模型 gzip 化** | OSS 对象元数据 | 数据 | 模型传输 **86.3 → 20.0 MB（−77%）** |
 
 ## 端到端效果
 
@@ -95,6 +96,7 @@ scripts/
   prof-stronghold.mjs / analyze-prof.mjs / close-inspector.mjs
                             给运行中的 Node 做 CPU profile（kill -USR1，不重启）
   test-delta-e2e.mjs         增量编码端到端测试（6 组：稳态/中途加入/重连/丢帧/边界/CPU）
+  gzip-spine-to-oss.sh       把 .skel/.atlas 以 gzip 形式重传 OSS（幂等，可重复跑）
   cpu-measure.sh / status-report.sh           只读体检
 
 docs/
@@ -104,6 +106,7 @@ docs/
   04-measurements.md         编码 / 协议 / 语言的本地基准测试（含 CPU profile 归因）
   05-missing-assets.md       补齐上游缺失素材（含上游来源映射表）
   06-delta-encoding.md       增量编码端到端验证（6/6 通过，再省 58% 带宽）
+  07-spine-gzip.md           Spine 模型 gzip 化（已上线，模型传输 −77%）
 ```
 
 ## 部署顺序（重要）
