@@ -89,6 +89,57 @@ CPU 随玩家数线性增长。把压缩搬到应用层（压一次、广播 N �
 
 ---
 
+## ④ CPU 归因：压缩只占 1.1%（**更正过一次结论**）
+
+一开始我以为「开了 WS 压缩 → CPU 从 9.9% 涨到 40%」。**做 CPU profile 后发现是错的。**
+
+### 怎么给运行中的 Node 做 profile（不重启）
+
+```bash
+kill -USR1 $(pgrep -x node22)          # 打开 inspector 到 127.0.0.1:9229
+node prof-stronghold.mjs 30            # CDP 连上去开 Profiler，采样 30 秒
+node analyze-prof.mjs                  # 分析
+```
+
+**两个坑**：
+- 服务器上的 `node` 可能是 **v20（没有全局 `WebSocket`）** → 用 `/usr/local/bin/node22`，
+  或退回游戏自带的 `ws` 包（CJS，要取 `.WebSocket` / `.default`）
+- **关闭 inspector**：CDP `Runtime.evaluate` 执行 `process._debugEnd()`
+  （`import('node:inspector')` 会报 `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING`）
+- ⚠️ 打开后**必须关掉**，别在线上留调试端口
+
+### 结果
+
+```
+采样点 96053，idle 60.8% → 非 idle 39.2%（与实测 CPU 36% 吻合 ✓）
+
+按模块（非 idle 占比）：
+  60.6%  游戏模拟 server/sim        ← 真正的大头
+  18.9%  对局逻辑 server/match
+  10.6%  native/V8/GC
+   2.1%  网络/大厅 server
+   1.1%  压缩 zlib（permessage-deflate + node:zlib，共 404 点）
+   0.6%  shared/protocol.js
+```
+
+热点函数 TOP 5（非 idle 占比）：`(garbage collector)` 3.82%、
+`effectiveProfile @sim/ai.js:37` 3.52%、`(匿名) @sim/Battle.js:417` 3.03%、
+`writev` 2.53%、`_tickBuffs @sim/Battle.js:1257` 2.47%。
+
+### 结论
+
+- **压缩只占 1.1%** —— 它不可能解释 +26 个百分点的涨幅
+- CPU 涨的真正原因是**并发对局数增加**（`sim + match` = **79.5%**）
+- 之前那个 9.9% 是在**事故刚恢复、多数人还在大厅**时测的 → **没有可比性**
+- **CPU 现状不需要优化**：36% of one core（2 核）= 整机 18%，负载 0.4–1.0
+
+### 教训
+
+**归因不能只看「改了 A 之后 B 变了」。** 中间还有一个变量（对局密度）在变。
+**要做 CPU profile 才能确定热点** —— profile 一开就发现压缩只占 1.1%。
+
+---
+
 ## 总结：三个方向里只有「策略」值得动
 
 | 方向 | 收益 | 值不值得 |

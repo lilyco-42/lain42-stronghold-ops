@@ -61,7 +61,12 @@
 | **3 Mbps 能承载的玩家数** | 约 225 人 | **约 850 人（3.8×）** |
 | 静态请求打到服务器 | 577 / 15s | **1 / 12s（−99.8%）** |
 | pingap FD | 1021 / 1024 ❌ | 1364 / 524288 ✅ |
-| 服务器 CPU | 9.9% | **40%**（压缩的代价） |
+| 服务器 CPU | 见下方说明 | **36% of one core**（= 整机 18%） |
+
+> **关于 CPU**：一度以为 CPU 从 9.9% 涨到 40% 是压缩的代价 —— **那是错的**。
+> 用 CPU profile 实测（`docs/04-measurements.md`）：**压缩只占 1.1% 的 CPU**，
+> 真正的大头是**游戏模拟 60.6% + 对局逻辑 18.9%**。CPU 随**并发对局数**变化，
+> 与压缩无关。详见 `docs/04-measurements.md` 的「CPU 归因」一节。
 
 ## 目录
 
@@ -87,6 +92,8 @@ scripts/
   deploy.sh                  部署脚本（含步骤 2b：恢复 local 素材，防重部署丢失）
   sp-watchdog.sh + .service + .timer          自愈：FD / 熔断 / 内存 / tmpfs
   sp-apply-ws-compress.sh + .service + .timer 等没人在线时自动开 WS 压缩
+  prof-stronghold.mjs / analyze-prof.mjs / close-inspector.mjs
+                            给运行中的 Node 做 CPU profile（kill -USR1，不重启）
   cpu-measure.sh / status-report.sh           只读体检
 
 docs/
