@@ -53,6 +53,7 @@
 | 13 | **Spine 模型 gzip 化** | OSS 对象元数据 | 数据 | 模型传输 **86.3 → 20.0 MB（−77%）** |
 | 14 | 资源分离审计（只读） | `docs/08-resource-split-audit.md` | 结论 | 素材已全在 OSS；node 只剩 `/ws`+`index.html`+`/data`+`/sim` |
 | 15 | 客户端发布线 + 跨版本兼容 | `docs/09-client-release-line.md` | 结论 | exe/apk 装机玩家对服务器只剩 `ws`+`/healthz` |
+| 17 | 客户端字体镜像 + 零外部依赖闸门 | 游戏 fork 分支 + `tools/check-payload-offline.mjs` | **代码** | ⚠️ 源头已改，**已发布 exe/apk 仍带外链**，等新 payload（`docs/11`） |
 | 16 | 大厅注册开关改读 `site.json` | `config.py` + `wsgi.py`（`scripts/patch-lobby-skip-email-verify.py`） | **代码** | ⚠️ **未部署**：注册从「永远 400」→ 可注册（`docs/10`） |
 
 ## 端到端效果
@@ -115,6 +116,7 @@ docs/
   08-resource-split-audit.md 资源分离审计：服务器现在只发 /ws + index.html + /data + /sim
   09-client-release-line.md  客户端发布线：payload → Release → CI 闸门 → 产物核对 → 跨版本事实
   10-lobby-register-400.md   大厅注册永远 400（代码已备好，线上未部署）
+  11-client-fonts-offline.md 客户端字体离线化：112 个 woff2 逐字节镜像（闸门已就位，产物待发）
 
 AGENTS.md                   AI 协作契约：机器/仓库地图、红线、补丁脚本五条不变量、什么才算证据
 ```
