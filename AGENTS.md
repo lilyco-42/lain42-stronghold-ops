@@ -70,10 +70,12 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
 - ~~线上是混合版本~~ **2026-10-05 15:59 复测：这条已过时**。服务在 15:33:25 CST 又被重启过一次（不是本会话做的，本会话全程只读），
   线级探测现在报 `room.spectate`/`room.kick`/`room.removeSpectator`/`room.join` **全部 handled**（rc=0，正控制仍 unknown）。
   但线上那份 checkout 的 git 状态**不能当版本证据**：HEAD 还停在 `8b10625`（10-03）而有 177 个文件处于 modified，
-  `shared/protocol.js` 的 md5 `a17f47ae…` 与任何 git 树都不同 —— 比 v0.1.3 多一条**手写**进 `hello` 的 `z` 校验（`docs/12` §6 附原行）。
-  下一次覆盖式升级若不先把这条 diff 出来，它会静默消失。诊断与复现命令在 `docs/12-prod-0.1.3-overlay.md` §5、§6。
-- 大厅 `wsgi.py` 一天里被外部改过两次（13:48 变全 LF、14:10 再变，md5 `24c6a6eb…`→`43c3b939…`→`3918ab4b…`），
-  `config.py` 未变（`b2c9493a…`）；`patch-lobby-skip-email-verify.py --dry-run` 在最新字节上重跑仍 rc=0（见 `docs/10` 末节）。
+  `shared/protocol.js` 的 md5 `a17f47ae…` 与任何 git 树都不同 —— 比 v0.1.3 多一条**手写**进 `hello` 的 `z` 校验（`docs/12` §5 末尾那段附了原行）。
+  下一次覆盖式升级若不先把这条 diff 出来，它会静默消失。诊断与复现命令在 `docs/12-prod-0.1.3-overlay.md` §5。
+- 大厅 `wsgi.py` 一天里被外部改过两次（13:48 变全 LF、14:10 再变，md5 `24c6a6eb…`→`43c3b939…`→`3918ab4b…`→`df38d032…`），
+  `config.py` 未变（`b2c9493a…`）；**16:04 又把线上三份文件取回本机重验**：wsgi `df38d03247f6…`（mtime 14:46:42，与上次相同）、
+  config `b2c9493a…`、`data/site.json` `b0bdd7d2…` → `patch-lobby-skip-email-verify.py --dry-run` **rc=0**
+  （config.py 第 70 行后插 2 行、wsgi.py 第 109 行替换 1 行），回归测试 **0 check(s) failed**（含"用线上 site.json 注册 → 201"）。
   **推论**：动大厅前必须重新 `--dry-run` + `md5sum`，不能沿用早上的结论。
 - `docs/08-resource-split-audit.md` 结论：素材层已彻底分离（清单 4451 条指向 OSS，同源只剩 8 条），
   node 只剩 `/ws` + `index.html` + `/data` + `/sim`。
