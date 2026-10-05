@@ -28,7 +28,8 @@ npm test --silent                                            # 全量（2026-10-
 但 workflow 从未注册 —— `/actions/workflows` 为空、`/actions/runs` 的 `total_count:0`、
 `gh workflow run ci.yml --ref <branch>` 报 `workflow ci.yml not found on the default branch`，
 推分支也不触发。所以游戏仓库的证据只有本机 `npm test` 一份；要 CI 级的绿只能走上游 `pull_request`
-（本任务约定只提交到自己的 fork，不开 PR）。客户端仓库相反：`build-clients.yml` 正常跑，四道闸门都在那里。
+（本任务约定只提交到自己的 fork，不开 PR）。客户端仓库相反：`build-clients.yml` 正常跑，五道闸门都在那里
+（完整性 / 版本 / **出处** / 暂存离线 / 产物离线，见 `docs/09` 那张表）。
 
 ## 2. 素材：新清单引用的文件必须在磁盘上
 

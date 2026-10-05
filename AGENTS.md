@@ -63,7 +63,8 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
   OSS 前端改写与字体镜像一起没了；素材清单没受影响（4506 条 OSS）。全在 `docs/12-prod-0.1.3-overlay.md`。
   `PROTOCOL_VERSION` 三个版本都是 1 → 升不升级**不能**靠 socket 协商。
 - 客户端已发布跨版本兼容产物（见客户端仓库 Release `v0.1.3-compat` 与 `docs/09-client-release-line.md`）；
-  fork 分支已合并上游 `bd892a4`（0 behind，`git rev-list --left-right --count upstream/master...HEAD` 实测 `0 13`），
+  fork 分支已合并上游 `bd892a4`（要紧的判据是**左边为 0 = 不落后**；右边的领先数每提交一次就变，
+  2026-10-05 16:55 现测 `git rev-list --left-right --count upstream/master...HEAD` = `0 17`），
   待发布的 payload 是 **c10**（`v0.1.3-16-g603b94c`，sha256 `234ee962…ec36`；c9 作废）。
   换基线之后怎么核对、以及"c10 什么时候才需要重打"，见 `docs/13-upgrade-drift-checklist.md`。
 - 大厅注册 400 的修复**代码已备好、回归测试全绿、线上未部署**：`docs/10-lobby-register-400.md`。
