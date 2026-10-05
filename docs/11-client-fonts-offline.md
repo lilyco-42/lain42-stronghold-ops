@@ -79,6 +79,11 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 | 桌面产物 | `app.asar` 只有 **29,619 B**（壳代码，`resolveMediaPath` 命中 2 次），游戏那份 www 在旁边的 `resources/www/` | 产物级闸门要指 `build/desktop/win-unpacked/resources/www`；只查 asar 根本看不到 HTML |
 | APK 产物 | `assets/public/**` 共 **4255** 条（zip 总 4693 条：stored 3213 / deflate 1480）；**整包 grep `fonts.googleapis.com` = 0 命中**，但解开 `assets/public/index.html` 后同一字符串出现 **2 次** | 必须按 zip 条目解开再查；对 APK 做整包 grep 会一路放行 |
 
+这两条路径不是抄来的，是从打包配置推导并由测试绑住的：桌面的 www 来自 `electron-builder` 的
+`extraResources: ../build/client/www -> to: www`（`asar: true` 只装 4 个壳文件），安卓的前缀来自
+`capacitor.config.json` 的 `webDir: ../build/client/www`（落进 `assets/public/**`）。
+测试里把 `to` 改成 `www2` 会有两项立刻变红（客户端仓库 `test/packaging.test.js`，65/65）。
+
 `tools/check-payload-offline.mjs` 因此支持三种目标（目录 / `--zip`），CI 两个 job 各多一步
 `零外部依赖（产物内，闸门）`，排在二进制生成之后、上传之前（客户端仓库 `5b46f03`，测试 63/63，
 把 inflate 那行改坏后有 4 项变红）。zip 解析器与 `python zipfile` 在真实 224 MB APK 上对齐：
