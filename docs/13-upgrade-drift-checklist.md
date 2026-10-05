@@ -89,6 +89,28 @@ tar 内含那 2 条 corrosion BGM，离线闸门 0 问题。c8（4366 文件，`
 合并后仍 `APPLIES`（`index.html` 2 / `net.js` 3 / `room.js` 2）。**它的 hunk 数、文件数、
 `docs/PACKAGING.md` 里那句数字三处必须一起改**，否则下次没人知道谁过期了。
 
+## 5b. 补丁配对的另一半：拿一棵**纯净上游树**再跑一遍（16:24 实测）
+
+`--tree` 只能指一棵树，而 `03` / `03b` 是**成对**写的（`03` 面向纯净上游，`03b` 面向带字体镜像的 fork）。
+只在 fork 树上跑一遍，看不出配对是否还成立。纯净树不用第二个 clone：
+
+```
+cd D:/Code/Stronghold-Protocol-upstream
+rm -rf D:/Code/_artifacts/pristine && mkdir -p D:/Code/_artifacts/pristine
+git archive upstream/master | tar -x -C D:/Code/_artifacts/pristine     # 601 文件，public/webfonts 不存在
+python3 scripts/check-game-patches.py --tree D:/Code/_artifacts/pristine --allow-fail 04-asset-manifest-cdn
+```
+
+| 树 | `01` | `02` | `03` | `03b` | `04` | rc |
+|---|---|---|---|---|---|---|
+| fork `b0397db` | offset 71 | offset 3 | **FUZZ 2** | **clean** | FAILED（容忍） | 0 |
+| 纯净 `upstream/master` | offset 71 | offset 3 | **clean** | **FUZZ 2**（Hunk #1 at 23） | FAILED（容忍） | 0 |
+
+两行的 03/03b 必须**互补**：哪一天两边都 clean 或都 FAILED，就说明这对补丁写重了/写漏了，
+升服务器时会出现"镜像被上游版覆盖"或"两个补丁打架"。`04` 是对生成物（`data/assets.json`）的补丁，
+在任何树上都该 FAILED，靠 `--allow-fail 04-asset-manifest-cdn` 容忍 —— 别把它当回归，也别删掉这条容忍。
+⚠️ 不带 `--tree` 直接跑会 rc=2 报 usage，这是脚本的正常拒绝，不是漂移。
+
 ## 6. 版本信号别只信 `/healthz.app`：拿线级能力对一遍
 
 ```
