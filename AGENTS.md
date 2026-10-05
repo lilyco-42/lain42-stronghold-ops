@@ -63,11 +63,15 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
   OSS 前端改写与字体镜像一起没了；素材清单没受影响（4506 条 OSS）。全在 `docs/12-prod-0.1.3-overlay.md`。
   `PROTOCOL_VERSION` 三个版本都是 1 → 升不升级**不能**靠 socket 协商。
 - 客户端已发布跨版本兼容产物（见客户端仓库 Release `v0.1.3-compat` 与 `docs/09-client-release-line.md`）；
-  fork 分支已合并上游 `bd892a4`（merge commit `dae0a67`，0 behind），待发布的 payload 是 **c9**
-  （`v0.1.3-16-g603b94c`，sha256 `234ee962…ec36`）。换基线之后怎么核对，见 `docs/13-upgrade-drift-checklist.md`。
+  fork 分支已合并上游 `bd892a4`（0 behind，`git rev-list --left-right --count upstream/master...HEAD` 实测 `0 13`），
+  待发布的 payload 是 **c10**（`v0.1.3-16-g603b94c`，sha256 `234ee962…ec36`；c9 作废）。
+  换基线之后怎么核对、以及"c10 什么时候才需要重打"，见 `docs/13-upgrade-drift-checklist.md`。
 - 大厅注册 400 的修复**代码已备好、回归测试全绿、线上未部署**：`docs/10-lobby-register-400.md`。
-- 线上是**混合版本**：`server/` 已 0.1.3、`shared/protocol.js` 还是 0.1.1，所以三个 0.1.3 动词在线上是拒收的
-  （客户端会点一次才学会灰）。诊断与复现命令在 `docs/12-prod-0.1.3-overlay.md` §5；换基线后的整套核对在 `docs/13`。
+- ~~线上是混合版本~~ **2026-10-05 15:59 复测：这条已过时**。服务在 15:33:25 CST 又被重启过一次（不是本会话做的，本会话全程只读），
+  线级探测现在报 `room.spectate`/`room.kick`/`room.removeSpectator`/`room.join` **全部 handled**（rc=0，正控制仍 unknown）。
+  但线上那份 checkout 的 git 状态**不能当版本证据**：HEAD 还停在 `8b10625`（10-03）而有 177 个文件处于 modified，
+  `shared/protocol.js` 的 md5 `a17f47ae…` 与任何 git 树都不同 —— 比 v0.1.3 多一条**手写**进 `hello` 的 `z` 校验（`docs/12` §6 附原行）。
+  下一次覆盖式升级若不先把这条 diff 出来，它会静默消失。诊断与复现命令在 `docs/12-prod-0.1.3-overlay.md` §5、§6。
 - 大厅 `wsgi.py` 一天里被外部改过两次（13:48 变全 LF、14:10 再变，md5 `24c6a6eb…`→`43c3b939…`→`3918ab4b…`），
   `config.py` 未变（`b2c9493a…`）；`patch-lobby-skip-email-verify.py --dry-run` 在最新字节上重跑仍 rc=0（见 `docs/10` 末节）。
   **推论**：动大厅前必须重新 `--dry-run` + `md5sum`，不能沿用早上的结论。

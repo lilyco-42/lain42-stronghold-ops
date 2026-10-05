@@ -96,8 +96,12 @@ node scripts/probe-server-capability.mjs wss://<host>/ws   room.spectate room.ki
 ```
 
 判读只看 `verdict`：`unknown` = 类型表里没有（这台机器没这能力），`handled` = 认得（回的是业务级错误）。
-今天线上实测：三个 0.1.3 动词全 `unknown`，`room.join` 是 `handled`，自造那个 `unknown`（正控制过）——
-而 `/healthz.app` 却报 `0.1.3`。原因是 `shared/` 与 `server/` 版本不一致（详见 `docs/12` §5）。
+**同一台服务器一天里两个答案都实测到过，所以这条必须重跑、不能引用文档**：
+15:09 三个 0.1.3 动词全 `unknown`（`/healthz.app` 却报 0.1.3 —— `shared/` 与 `server/` 不一致）；
+15:33:25 CST 有人重启之后，15:59 复测同一条命令变成**四个全 `handled`、rc=0**（正控制仍 `unknown`）。
+`docs/12` §5 有两次输出与那行只读的 `hello.z` 手写改动。
+⚠️ 脚本已改：**正控制不再计入"缺失的能力"**（改之前任何一次运行都固定报"缺 1 个能力"，是假缺失）。
+反向对照：命令里加一个 `room.definitelyMissing` → rc=2、报缺 1 个。
 **探测器的 name 要用短名字**（`'CapabilityProbe'` 会收不到 welcome，全是超时）。
 
 ## 7. 服务器侧收尾（都要人点头）

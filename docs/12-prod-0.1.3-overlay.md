@@ -109,6 +109,28 @@ print(\"oss urls\", len(u)); print(\"sample\", u[0])
 
 ## 5. `/healthz.app` 会骗人：线上是"混合版本"（15:09 实测）
 
+> **⚠️ 本节结论已于 15:59 被复测推翻，留在这里是因为它记录的是 15:09 那一刻的真实状态。**
+> 15:33:25 CST 服务又被重启过一次（**不是本会话做的**，本会话全程只读；核对：`systemctl show stronghold -p ExecMainStartTimestamp`）。
+> 重启后线级探测（`node scripts/probe-server-capability.mjs wss://sp.lain42.top/ws room.spectate room.kick room.removeSpectator room.join room.notARealVerb`）：
+>
+> ```
+>   handled  room.spectate          ROOM_NOT_FOUND:
+>   handled  room.kick              BAD_MSG: bad field seat
+>   handled  room.removeSpectator   BAD_MSG: bad field playerId
+>   handled  room.join              ROOM_NOT_FOUND:
+>   unknown  room.notARealVerb      BAD_MSG: unknown type room.notARealVerb
+> 正控制：1 个自造动词全部 unknown（判据有效）。
+> 结论：探测到的能力都在。            ← rc=0（脚本改动前这里会误报"缺 1 个能力"，因为把正控制也数进了缺失）
+> ```
+>
+> 反向对照同一条命令加 `room.definitelyMissing` → rc=2 并报缺 1 个 —— 这条判据仍咬得住。
+> 另两条只读实测：**线上 checkout 的 git 状态不是版本证据**（HEAD 仍 `8b10625`/10-03，而 `git status --porcelain` 有 177 个 ` M`：
+> 覆盖式升级是直接往工作树拷文件，从不提交）；`shared/protocol.js` md5 `a17f47ae2393b925488a67bdc7309eb4`，
+> 与 v0.1.3 / master 的 `cf169aeab8962221d790b39009532d83` 都不同 —— 与 v0.1.3 相比**只有一行**差别，而且是手写的：
+> `hello` 的类型表里多了 `z: (v) => v == null || v === 1`，`$optional` 里多了 `'z'`（第 241 行）。
+> 下一次覆盖式升级如果按 git 树整份拷，这行会静默消失 —— 升级前先 `diff` 线上文件，别按 `git log` 推断线上。
+
+
 客户端侧一切正常，但结论是**错的**那一半在这里纠正。两次独立测量：
 
 - 版本探测：新 payload 用纯静态服务起在 `127.0.0.1:47901`，真 Chromium 里按应用自己的方式 `new Net({})` +

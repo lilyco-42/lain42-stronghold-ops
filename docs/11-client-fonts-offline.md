@@ -115,7 +115,7 @@ D:/Code/_artifacts/sp-client-payload-0.1.3-c10.tar.gz
   build.json: game.app=0.1.3, describe=v0.1.3-16-g603b94c, protocol=1, 4368 文件 / 295.3 MB
   （c8 = 4366 文件 / v0.1.3-8-g86719d1 已作废：合并上游 bd892a4 之后它是旧基线，缺 #110 的 2 条 BGM）
 
-gh release create payload-v0.1.3-c10 --draft=false --title 'payload v0.1.3-c9（字体镜像 + 0.1.3 最新基线）' \
+gh release create payload-v0.1.3-c10 --draft=false --title 'payload v0.1.3-c10（字体镜像 + 0.1.3 最新基线）' \
   D:/Code/_artifacts/sp-client-payload-0.1.3-c10.tar.gz
 gh workflow run build-clients.yml -R lilyco-42/StrongholdProtocolClient \
   -f payload_url='https://github.com/lilyco-42/StrongholdProtocolClient/releases/download/payload-v0.1.3-c10/sp-client-payload-0.1.3-c10.tar.gz' \
