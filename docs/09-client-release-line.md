@@ -16,12 +16,13 @@
 
 ## 闸门与踩过的坑
 
-CI 现在一共**四道**闸门（两个 job 各两遍），顺序就是防御顺序：
+CI 现在一共**五道**闸门（两个 job 各跑一遍），顺序就是防御顺序：
 
 | # | 步骤名 | 查什么 | 红过一次吗 |
 |---|---|---|---|
 | 1 | `校验 payload 完整性` | 四个必需文件在不在、素材数 >3000 | — |
 | 2 | `校验 payload 版本（闸门）` | `build.json.game.app` 对 `expect_app`（或本仓库 `version`）+ `server` 输入 | run #4 就是死在这（payload 停在 0.1.1） |
+| 2b | `payload 出处（闸门）`（`tools/check-payload-provenance.mjs`） | `build.json.game.dirty` 必须是 `false`，且 `describe` 末尾要有 `-g<7+ 位 hex>` | **今天新增，起因是实测不是回归**：默认 `payload_url` 那份（OSS，15:40:49 CST 被换过，195,809,375 B）里 `describe="v0.1.3-dirty"`、`dirty:true`，版本闸门与离线闸门都会放行它 —— 没有这道闸门，CI 会绿着发一个追不到 commit 的 exe/apk |
 | 3 | `零外部依赖（闸门）` | **暂存 payload**：任何**站外引用形式**（href/src/url()/fetch/@import/`new WebSocket('http…')`）/ CDN 绝对地址 / 字体镜像完整性 | run `37270463759`（故意用旧 payload 跑的）两个 job 都红在这一步 |
 | 4 | `零外部依赖（产物内，闸门）` | **出厂字节**：桌面扫 `resources/www`，APK 用 `--zip` 按条目扫 | 本地对已发布的旧 exe/APK 跑是红的；新产物还没经 CI 出过 |
 
