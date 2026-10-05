@@ -4,7 +4,9 @@
 
 ## 1. 发生了什么
 
-- `stronghold.service` **14:20:24 CST** 重启（`MainPID=3879232`、`NRestarts=0`、`Result=success` —— 主动重启，不是崩溃）。
+- `stronghold.service` 在被反复重启：实测 **14:20:24 → 14:26:09 → 15:33:25 CST**（`NRestarts=0`、`Result=success` ——
+  都是主动重启，不是崩溃），`/healthz` 的 `build` 标记也跟着换（`170cbe5e0753` → `634b49baa15c` → `e08209981ca9`）。
+  也就是说这台机器**此刻正被别人 aktif 迭代**：任何结论都要现场重取，别沿用几分钟前的读数。
 - 看起来是 0.1.3：`package.json` 的 `"version": "0.1.3"`，`server/` 里 `room.spectate` / `removeSpectator`
   命中 13 处（`server/lobby.js:292` 有 `case 'room.spectate'`），14:25 / 14:26 两个 mtime 也对得上。
   ⚠️ **但这句话当时只成立了一半**：`shared/protocol.js` 还是 0.1.1 那份（`room.join` 在表里、`spectate` 命中 0），
@@ -14,7 +16,7 @@
   `git status --porcelain` 有 **238 个 `M`**。也就是说这是**把新文件覆盖到旧 checkout 上**，不是切 tag/commit。
   直接后果：`git diff` 成了唯一的回滚线索，没有可切的旧 commit，仓库里也没有留 `*.bak*`。
 - 大厅同一时段也被改过：`online-platform.service` **14:10:11 CST** 重启，`wsgi.py` md5 现在是 `3918ab4b…`
-  （13:22 我测的是 `24c6a6eb…`，13:48 变 `43c3b939…`，14:10 又变一次）。`config.py` 一直未变（`b2c9493a…`）。
+  （13:22 我测的是 `24c6a6eb…`，13:48 变 `43c3b939…`，14:10 又变一次）。`config.py` 一直未变（`b2c9493a…`）。15:39 复看：`wsgi.py` 仍是 `df38d032…`，`config.py` 里 `skip_email_verify` 仍是 0 命中。
   我准备好的注册修复在最新字节上重跑 `--dry-run` **仍然 rc=0**（锚点还在 `wsgi.py:109`；
   `config.py` 里 `skip_email_verify` 仍然 0 命中 —— 那正是这个 bug 的成因）。
 
