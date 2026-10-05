@@ -165,6 +165,7 @@ AGENTS.md                   AI 协作契约：机器/仓库地图、红线、补
 4. **改 pingap 配置前先 `pingap -c /etc/pingap.toml -t`** —— 配置错会让 443 全挂。
 5. **`pgrep -f 'pingap -c ...'` 会匹配到自己的 bash** —— 用 `pgrep -x pingap`。
 6. **重启 stronghold = 丢掉所有进行中的对局** —— 状态只在内存里，没有落盘。
-7. **线上大厅的 `config.py` / `wsgi.py` 是全 CRLF 的**（实测 134/134、4985/4985 行带 CR）—— 本仓库 `*.patch` 被
+7. **线上大厅文件带 CR**（2026-10-05 13:22 实测 `config.py` 134/134、`wsgi.py` 4985/4985 行带 CR；13:48 之后
+   `wsgi.py` 被另一处改动改成全 LF，`config.py` 未变）—— 本仓库 `*.patch` 被
    `.gitattributes` 强制成 LF，CR 会被吃掉，`patch -p1` 只会 `Hunk FAILED (different line endings)`。
    给这类文件打改动一律写 `scripts/patch-*.py`（按行匹配 + `--dry-run` + 保留各自换行符），见 `docs/10`。

@@ -10,7 +10,7 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
 | `root@lain42.top` | 生产机（阿里云 2 核 / 出口 3 Mbps） | **`ssh`/`scp` 必须带 `-i ~/.ssh/lain42.pem`**，默认 `id_ed25519` 会被拒 |
 | `/opt/Stronghold-Protocol` | 游戏**线上 checkout**，`stronghold.service` 直接跑它，静态与 `data/` 按磁盘现状服务 | 改这里 = 立刻影响正在玩的人 |
 | `/opt/sp-game-src` | 同 HEAD 的干净镜像，**没有任何服务引用** | staging/构建用这个，别动上面那份 |
-| `/opt/online-platform` | Flask 大厅（`online-platform.service`，127.0.0.1:5000） | 与游戏是**两个进程两个端口**，重启大厅不杀对局 |
+| `/opt/online-platform` | Flask 大厅（`online-platform.service`，127.0.0.1:5000） | 与游戏是**两个进程两个端口**，重启大厅不杀对局；**另一个会话会往这里部署**（2026-10-05 13:48 有过一次 ads 改动 + 重启），动它之前先 `md5sum` 对一遍 |
 | `/etc/pingap.toml` | 443 反代。`[servers.https].locations` 里与这个游戏相关的顺序（实测第 56-64 行）：`sp_healthz`、`sp_data`、`sp_sim`、`lobby_sub_ws`、`lobby_sub`、`sp`、`sp_ws`、`lobby`、`lobby_ws` | 改前先 `pingap -c /etc/pingap.toml -t`；reload 有 1–3 s 抖动；**pingap 不能停**；新 location 必须排在 `sp`（`path="/"`）**之前** —— 上面的 `sp_data`/`sp_sim` 就是靠这个顺序生效的 |
 | `dl.lain42.top`（47.101.28.199，AliyunOSS） | 美术/spine/字体/素材清单，以及客户端 payload | 与本机（8.153.102.122）不同源，所以素材不占本机网卡；**payload 是永久地址，不要覆盖已发布版本** |
 | `sganggs/Stronghold-Protocol` | 游戏上游（GPL-3.0） | 对 fork 账号只有 `pull: true, push: false` → 任何贡献走 fork→branch→PR；本仓库的分支改动**只在用户明确要求时才提 PR** |
@@ -57,5 +57,7 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
   `PROTOCOL_VERSION` 三个版本都是 1 → 升不升级**不能**靠 socket 协商。
 - 客户端已发布跨版本兼容产物（见客户端仓库 Release `v0.1.3-compat` 与 `docs/09-client-release-line.md`）。
 - 大厅注册 400 的修复**代码已备好、回归测试全绿、线上未部署**：`docs/10-lobby-register-400.md`。
+- 大厅 `wsgi.py` 在 2026-10-05 13:48 被另一处改动重写过（变全 LF、194,356 B），`config.py` 未变；
+  `scripts/patch-lobby-skip-email-verify.py --dry-run` 在新字节上重跑仍然 rc=0（见 `docs/10` 末节）。
 - `docs/08-resource-split-audit.md` 结论：素材层已彻底分离（清单 4451 条指向 OSS，同源只剩 8 条），
   node 只剩 `/ws` + `index.html` + `/data` + `/sim`。
