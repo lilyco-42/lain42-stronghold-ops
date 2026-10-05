@@ -64,6 +64,18 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 
 ## 6. 两个宿主各自怎么验的（换 payload 后照抄这张表）
 
+> **2026-10-05 更新：这张表里"纯静态等价道"和"桌面壳发镜像"两条已经从一次性探针变成仓库里的测试**，
+> 不用再依赖没人能重跑的脚本 —— 客户端仓库 `test/packaging.test.js`：
+> `the weakest host model still serves the mirror: plain static, no alias, no rewrite (Capacitor does exactly this)`
+> 钉住"别名在纯静态下必然 404 / 真地址 200 / 镜像表 200 且 `text/css`、切片 `font/woff2` / 缺失切片 404 作正控制"，
+> 并且扫**真的** `google.css`：实测 **112 个 `url()`，非根绝对路径 0 个**（相对引用的话，嵌套页面就会去要
+> `/dev/webfonts/…`，纯静态宿主按原样发，直接 404 落回系统字体）。
+> `the shell serves the mirrored font sheet the way a font host does (mime + long cache, and no escape)`
+> 钉住 `LONG_CACHE_DIRS` 里必须有 `webfonts`、css/woff2 的 mime、`index.html` **不得**继承长缓存（正控制，
+> 防止"全都长缓存"也能让前四条全绿），以及 `/webfonts/google/../../../../../../windows/win.ini` 必须非 200。
+> 本机整跑 **74/74**（2026-10-05 16:21 CST）。
+> ⚠️ 下表里**真 Chromium 看网络**那部分仍是手工测量（没有提交探针），换 payload 之后要照第三列重跑一遍。
+
 | 宿主 | 这条怎么测 | 实测 |
 |---|---|---|
 | 打包桌面（Electron 自带文件服务器） | 用 `desktop/serve.mjs` 的 `createStaticServer({ root: payload })` 起真实壳，再请求镜像 | `/webfonts/google/google.css` → **200 / `text/css` / `public, max-age=86400`**，421 个 `@font-face`、远程主机引用 **0**；`.woff2` → **200 / `font/woff2`**、magic `wOF2`；`index.html` → `no-cache`；不存在的音轨 → 404（没有把 404 伪装成 200） |
