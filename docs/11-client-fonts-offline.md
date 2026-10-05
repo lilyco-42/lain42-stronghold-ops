@@ -68,6 +68,7 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 | 打包桌面（Electron 自带文件服务器） | 用 `desktop/serve.mjs` 的 `createStaticServer({ root: payload })` 起真实壳，再请求镜像 | `/webfonts/google/google.css` → **200 / `text/css` / `public, max-age=86400`**，421 个 `@font-face`、远程主机引用 **0**；`.woff2` → **200 / `font/woff2`**、magic `wOF2`；`index.html` → `no-cache`；不存在的音轨 → 404（没有把 404 伪装成 200） |
 | 打包安卓（Capacitor 纯静态 `www/`） | Capacitor 就是把 `www/` 按根目录静态发出去，所以用**没有别名的纯静态服务**当等价lane（当初 `/media` 那个坑也是这么抓出来的），在真 Chromium 里看网络 | 对 `fonts.googleapis` / `fonts.gstatic` **0 请求**；21 个字体请求全部来自 `127.0.0.1`；`document.fonts` 424 face 已加载；Rajdhani 与回退字体度量不同（649.09 vs 755.98 px），说明镜像确实在用而不是回退 |
 | 网页版 | `curl -s https://sp.lain42.top/index.html \| grep -c fonts.googleapis.com` | **仍是 2 次外链**（0.1.1 热文件，未动） |
+| 升级后的 node 服务（本机 fork 分支实跑，不碰生产） | `PORT=5399 HOST=127.0.0.1 SP_NO_BROWSER=1 node server/index.js` 起一份，逐项 curl | `/healthz` 报 **`app:"0.1.3"`**；发出去的 `index.html` 里 **0 次外链、1 次 `/webfonts/google/google.css`**；`google.css` → 200 / `text/css` / **`public, max-age=86400`** / nosniff，带 `Accept-Encoding` 时 **gzip 455,869 → 129,626 B**；`.woff2` → 200 / `font/woff2`、**不**再 gzip（已压缩过，二次压缩是浪费 CPU）；`/data/assets.json` 200 / `no-cache`（回归没坏）、`/media/bgm/…` 200 / `audio/mpeg` 1,138,773 B（音频别名没坏）；`/webfonts/google/../../../etc/passwd` → **404**（多挂一个长缓存目录没开口子） |
 
 `android` 那条是**等价 lane 而非 APK 实测**——APK 要真机/模拟器才算摸过；这条区分在 `AGENTS.md` 的证据一节里也是硬要求。
 
@@ -104,3 +105,6 @@ draft 的 Release 资产匿名访问是 403，CI 拉不到 —— 建完要么�
 
 上线口径（`/opt/Stronghold-Protocol`）也顺带说明：那份是热文件，网页玩家直接命中，**不能**用编辑线上文件的方式
 铺字体镜像 —— 要么随 0.1.3 升级一起在低峰窗口换 checkout，要么先只在客户端线上用。
+
+> 网页玩家现在仍走外链：生产 `sp.lain42.top/index.html` 实测 2 次 `fonts.googleapis.com` + 1 次 `fonts.gstatic.com`。
+> 那份是热文件（本轮在线 246 人 / 177 场），只能随 0.1.3 升级整份换 checkout —— 上表最后一条就是升级后应当看到的结果。
