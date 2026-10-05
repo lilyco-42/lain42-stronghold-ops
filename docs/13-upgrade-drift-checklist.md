@@ -14,13 +14,21 @@ cd D:/Code/Stronghold-Protocol-upstream
 git fetch upstream
 git rev-list --left-right --count upstream/master...HEAD     # 左边非 0 就是落后了
 git merge --no-edit upstream/master                          # 用 merge，别 rebase：不改写已推出去的历史
-npm test --silent                                            # 全量（今天 3637 项）
+npm test --silent                                            # 全量（合并上游后实测 3638 项 / 3621 过 / 16 跳过）
 ```
 
 今天实测的两次数字：并行整跑时 `test/sim/robustness.test.js` 的 CPU 阈值闸会红
 （best-of-3 0.52 / 0.50 ms per tick，本机负载），单独跑该文件 **35/35 通过**（878–1795 ms）——
 判据是 `git diff upstream/master..HEAD -- server/sim test/sim` 为空（这条闸测的东西没被我们改过）。
 **别把这条 flake 当回归，也别拿它当通过**：要么单独复跑确认，要么承认没测。
+同类闸还有一条 `test/sim/perf.test.js`（70 敌人 + 10 干员 < 0.5 ms/tick），整跑红过一次、单跑 **2/2 绿**。
+
+⚠️ **游戏这一侧没有 CI 兜底**（今天查清，别再按"CI 会跑"来推理）：fork 的 Actions 开关是开的
+（`/actions/permissions` → `enabled:true`，public 仓库，默认分支 `master` 上确实有 `.github/workflows/ci.yml`），
+但 workflow 从未注册 —— `/actions/workflows` 为空、`/actions/runs` 的 `total_count:0`、
+`gh workflow run ci.yml --ref <branch>` 报 `workflow ci.yml not found on the default branch`，
+推分支也不触发。所以游戏仓库的证据只有本机 `npm test` 一份；要 CI 级的绿只能走上游 `pull_request`
+（本任务约定只提交到自己的 fork，不开 PR）。客户端仓库相反：`build-clients.yml` 正常跑，四道闸门都在那里。
 
 ## 2. 素材：新清单引用的文件必须在磁盘上
 
