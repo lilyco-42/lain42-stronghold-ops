@@ -46,12 +46,16 @@ CI 现在一共**四道**闸门（两个 job 各两遍），顺序就是防御�
 
 ## 服务器侧现状（2026-10-05 14:20 之后）
 
-线上 `/healthz.app` 已经是 **0.1.3**（`stronghold` 14:20:24、14:26:09 CST 两次重启），
-但**别把版本号当能力**（这句是 15:09 实测改的，先前我写成"所以观战/踢人会自动解禁"，那是错的）：
-线级探测 `room.spectate` / `room.kick` / `room.removeSpectator` 三个全部回 `BAD_MSG unknown type`，
-`room.join` 回业务级 `ROOM_NOT_FOUND` —— 那次部署是覆盖式的混合体：`server/` 上了 0.1.3，
-`shared/protocol.js` 还是 0.1.1，而 `server/net.js:587` 判类型只看后者那张表。
-客户端因此会点亮入口 → 玩家点一次报错 → 才被动学会灰掉。复现与机制在 **`docs/12-prod-0.1.3-overlay.md` §5**，
+线上 `/healthz.app` 已经是 **0.1.3**（`stronghold` 14:20:24、14:26:09，15:33:25 CST 又重启过一次），
+但**别把版本号当能力** —— 这条同一天实测到两个相反答案，所以只能现跑，不能引用文档：
+- 15:09：线级探测 `room.spectate` / `room.kick` / `room.removeSpectator` 三个全部回 `BAD_MSG unknown type`，
+  `room.join` 回业务级 `ROOM_NOT_FOUND`。那次部署是覆盖式的混合体：`server/` 上了 0.1.3，
+  `shared/protocol.js` 还是 0.1.1，而 `server/net.js:587` 判类型只看后者那张表。
+  客户端因此会点亮入口 → 玩家点一次报错 → 才被动学会灰掉。
+- 15:59（15:33 那次重启之后，同一条命令）：**四个全部 `handled`，rc=0**，正控制那个自造动词仍 `unknown`。
+  也就是说生产现在不再有"点一次才灰"的现象，那条被动学习路径留给更老的自建服与分叉。
+  ⚠️ 复测时请注意 `probe-server-capability.mjs` 改过：正控制不再计入"缺失能力"（改之前每次运行都固定报"缺 1 个"）。
+复现与机制在 **`docs/12-prod-0.1.3-overlay.md` §5**（含线上 `shared/protocol.js` 比任何 git 树多一条手写 `hello.z` 那段），
 换基线后的整套核对在 **`docs/13-upgrade-drift-checklist.md`**。
 同一次部署还把 `public/index.html` 换回上游那份（`dl.lain42.top` 命中 0、Google 字体外链回来了）；
 素材清单没受影响（4506 条 OSS）。

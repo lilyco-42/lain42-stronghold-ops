@@ -14,13 +14,14 @@ cd D:/Code/Stronghold-Protocol-upstream
 git fetch upstream
 git rev-list --left-right --count upstream/master...HEAD     # 左边非 0 就是落后了
 git merge --no-edit upstream/master                          # 用 merge，别 rebase：不改写已推出去的历史
-npm test --silent                                            # 全量（2026-10-05 15:53 在 6ea4a0e 实测 3639 项 / 3621 过 / 2 失败 / 16 跳过）
+npm test --silent                                            # 全量（2026-10-05 16:41 在 3dd1a2c 实测 3643 项 / 3624 过 / 3 失败 / 16 跳过）
 ```
 
-那 2 条失败都是 CPU 阈值闸：并行整跑时 `test/sim/robustness.test.js:739`（双人 BOSS 场，best 1.5747 ms/tick，限 0.5）
-与 `test/sim/perf.test.js:43`（70 敌人 + 10 干员 < 0.5 ms/tick）会同时红；单独复跑分别是
-**35/35** 与 **2/2 通过**。判据是 `git diff upstream/master..HEAD -- server/sim test/sim` 为空（这两条闸测的东西没被我们改过）。
-**别把它们当回归，也别拿它们当通过**：要么单独复跑确认，要么承认没测。
+那 3 条失败都是 0.5 ms/tick 阈值闸：并行整跑时 `test/sim/perf.test.js:22`、`test/sim/perf.test.js:43`、
+`test/sim/robustness.test.js:739` 会红；**这批文件单独复跑 37/37 全过**
+（`node --test test/sim/perf.test.js test/sim/robustness.test.js`）。判据是 `git diff upstream/master..HEAD -- server/sim test/sim` 为空（这几条闸测的东西没被我们改过）。
+⚠️ **红几条会随负载变**（同一天里 1、2、3 条都出现过）：判据不是条数，而是"红的是不是这几条阈值闸"——
+是就单独复跑确认，不是就是真回归。**别把它们当回归，也别拿它们当通过**。
 
 ⚠️ **游戏这一侧没有 CI 兜底**（今天查清，别再按"CI 会跑"来推理）：fork 的 Actions 开关是开的
 （`/actions/permissions` → `enabled:true`，public 仓库，默认分支 `master` 上确实有 `.github/workflows/ci.yml`），
