@@ -109,12 +109,40 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 ## 8. 换机器复现这份 payload（不需要碰生产）
 
 `public/assets|fonts|vendor` 和 `data/local-assets.json` 都不在 git 里，所以干净的 clone 一张美术都没有。
-可复现路径：把 CI 现在读的**已发布 payload** 解出来当素材源（`sp-payload-c5.tar.gz`，213,917,927 B，
-sha256 `de86c682da9cf32eb27dd95615e08e1cabefe3f889b811e2ec2f85e2a04ded80`），
-把 `assets/`、`fonts/`、`vendor/`、`webfonts/` 之外的素材目录拷进游戏 checkout，
-再 `node tools/package-client.mjs --server sp.lain42.top --game <checkout> --out <dir>`。
+素材源就用**已发布的那份 payload**（Release 资产是永久地址，不依赖任何人本机还留着解包目录）：
 
-本机这条已经验过包含关系：`payload-c6 ⊃ www-c5`，**0 个文件丢失**、只多了 113 个（字体镜像 112 + `google.css`）。
+```
+gh api repos/lilyco-42/StrongholdProtocolClient/releases/tags/payload-v0.1.3-c5 \
+  --jq '.assets[0].browser_download_url'                       # 也可写死：
+  # https://github.com/lilyco-42/StrongholdProtocolClient/releases/download/payload-v0.1.3-c5/sp-payload-c5.tar.gz
+curl -sL -o sp-payload-c5.tar.gz <上面那条地址>
+sha256sum sp-payload-c5.tar.gz                                 # 必须是 de86c682da9cf32eb27dd95615e08e1cabefe3f889b811e2ec2f85e2a04ded80
+tar -tzf sp-payload-c5.tar.gz | head                           # 布局是 ./assets ./css ./data ./js ./shared ./sim ./vendor ./fonts ./dev ./index.html ./build.json，共 5039 条
+```
+
+把解出来的 `assets/`、`fonts/`、`vendor/` 拷进游戏 checkout 的 `public/` 下，`data/local-assets.json` 拷进 `data/`，
+然后 `node tools/package-client.mjs --server sp.lain42.top --game <checkout> --out <dir>`。
+
+**包含关系怎么重验（别引用旧结论）**：解包目录是本机暂存，会被清掉 —— 2026-10-05 复查时 `payload-c6/` 已经没了，
+所以这条写成命令，谁都能重跑。两个列表都必须 `LC_ALL=C sort`，否则 `comm` 会因为排序规则不同给出几百行假差异
+（这个坑踩过，见 `docs/12` §3）：
+
+```
+tar -tzf sp-payload-c5.tar.gz | sed 's|^\./||' | grep -v -e '/$' -e '^$' | LC_ALL=C sort -u > a.list
+( cd <新的暂存目录> && find . -type f | sed 's|^\./||' ) | LC_ALL=C sort -u > b.list
+comm -23 a.list b.list | wc -l        # 期望 0：旧 payload 里的每个文件都得还在
+comm -13 a.list b.list | awk -F/ '{print $1}' | sort | uniq -c   # 多出来的按顶层目录分类看
+```
+
+2026-10-05 实测（c5 → **c10**）：`4253 → 4368`，**丢失 0**，多出 **115** = `webfonts/` 113（112 个 woff2 + `google.css`）
++ `assets/` 2（合并上游 `bd892a4` 带进来的 #110 那两条 corrosion BGM）。
+判读方式：多出来的**只许落在你预期新增的那几个顶层目录里**，且每一类都说得出原因；
+若哪天冒出一个说不清的顶层目录，那是素材漂移，先查清楚再发布。
+
+⚠️ 别把 `./` 漏掉不处理：`sed 's|^\./||'` 之后根目录条目变成**空字符串**，`grep -v '/$'` 不会滤掉它，
+于是 `comm -23` 平白多出一个"丢了 1 个文件"的假象（我就是这么撞上的 —— 打印出来才发现那一行是空的）。
+滤法要么加 `-e '^$'`，要么先 `grep -v '/$'` 再做 `sed`。
+c5 里 `grep -c webfonts` 是 **0**（镜像是 c5 之后才进 payload 的），所以"多出 113 个 webfonts"这条从一开始就成立。
 
 ## 9. 还没做的一步（要人点头）
 
