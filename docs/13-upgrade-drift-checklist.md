@@ -14,14 +14,13 @@ cd D:/Code/Stronghold-Protocol-upstream
 git fetch upstream
 git rev-list --left-right --count upstream/master...HEAD     # 左边非 0 就是落后了
 git merge --no-edit upstream/master                          # 用 merge，别 rebase：不改写已推出去的历史
-npm test --silent                                            # 全量（合并上游后实测 3638 项 / 3621 过 / 16 跳过）
+npm test --silent                                            # 全量（2026-10-05 15:53 在 6ea4a0e 实测 3639 项 / 3621 过 / 2 失败 / 16 跳过）
 ```
 
-今天实测的两次数字：并行整跑时 `test/sim/robustness.test.js` 的 CPU 阈值闸会红
-（best-of-3 0.52 / 0.50 ms per tick，本机负载），单独跑该文件 **35/35 通过**（878–1795 ms）——
-判据是 `git diff upstream/master..HEAD -- server/sim test/sim` 为空（这条闸测的东西没被我们改过）。
-**别把这条 flake 当回归，也别拿它当通过**：要么单独复跑确认，要么承认没测。
-同类闸还有一条 `test/sim/perf.test.js`（70 敌人 + 10 干员 < 0.5 ms/tick），整跑红过一次、单跑 **2/2 绿**。
+那 2 条失败都是 CPU 阈值闸：并行整跑时 `test/sim/robustness.test.js:739`（双人 BOSS 场，best 1.5747 ms/tick，限 0.5）
+与 `test/sim/perf.test.js:43`（70 敌人 + 10 干员 < 0.5 ms/tick）会同时红；单独复跑分别是
+**35/35** 与 **2/2 通过**。判据是 `git diff upstream/master..HEAD -- server/sim test/sim` 为空（这两条闸测的东西没被我们改过）。
+**别把它们当回归，也别拿它们当通过**：要么单独复跑确认，要么承认没测。
 
 ⚠️ **游戏这一侧没有 CI 兜底**（今天查清，别再按"CI 会跑"来推理）：fork 的 Actions 开关是开的
 （`/actions/permissions` → `enabled:true`，public 仓库，默认分支 `master` 上确实有 `.github/workflows/ci.yml`），
@@ -80,6 +79,11 @@ node tools/check-payload-offline.mjs <exe>/resources/www                    # �
 今天的数字：合并基线后重新打的是 **payload-c10** —— 4368 文件 / 295.3 MB，`describe v0.1.3-16-g603b94c`，
 tar `221,350,850 B`，sha256 `234ee9625fb844789d82289cad4f9a2bdaf491c622db8c2151eea752ff1fec36`，
 tar 内含那 2 条 corrosion BGM，离线闸门 0 问题。c8（4366 文件，`v0.1.3-8-g86719d1`）就此作废。
+
+**c10 不必因为分支又往前走而重打**（判据比"看有没有新 commit"准）：`603b94c` 是 HEAD 的祖先
+（`git merge-base --is-ancestor 603b94c HEAD` 为真），且 `git diff --name-only 603b94c..HEAD` 只列出
+`AGENTS.md` 与 `test/webfonts-local.test.js` —— 都不进 payload。只有当这个差集里出现
+`public/`、`shared/`、`data/`、`server/sim` 才必须重打（那时 `describe` 也会跟着变）。
 
 `game-client.patch`（客户端仓库打在 payload 上的那 3 文件 7 hunk）也要跟着复验：
 合并后仍 `APPLIES`（`index.html` 2 / `net.js` 3 / `room.js` 2）。**它的 hunk 数、文件数、
