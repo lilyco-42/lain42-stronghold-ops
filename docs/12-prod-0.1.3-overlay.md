@@ -44,7 +44,12 @@
 产出的 `index.html` 实测：**26 条 `dl.lain42.top`、0 次 Google 字体主机、0 条相对 css/js**、本地字体表 1 条 ——
 即"美术走 OSS + 字体离线"两个目标同时成立。旧的 `03` 依旧用于**不带镜像的上游树**（那边它干净可打），
 两条各管各的基线；把 `03b` 打到纯净上游只能靠 fuzz 2 命中，所以别混用。
-| `04-asset-manifest-cdn` | 数据部分天生对不上（`data/assets.json` 的 hunk FAILED）—— 它是**生成物的 diff**，本来就该用 `tools/apply-oss-assets.mjs` 重生成，不该拿补丁打 | 同左 | 清单是好的（4506 条 OSS），`tools/` 那两个 hunk 可打 |
+| **这张表现在可以一条命令复现**：`python3 scripts/check-game-patches.py --tree <checkout> --allow-fail 04-asset-manifest-cdn`
+（只读：补丁打在 `tempfile.mkdtemp` 的副本上）。在 fork 分支 `86719d1` 上的实测输出：
+`01 offset 71` / `02 offset 3` / `03 FUZZ 2` / `03b clean` / `04 FAILED`；
+不带 `--allow-fail` 时退出码 **1**，带上是 **0**（两个退出码都不经管道，单独取过）。
+
+`04-asset-manifest-cdn` | 数据部分天生对不上（`data/assets.json` 的 hunk FAILED）—— 它是**生成物的 diff**，本来就该用 `tools/apply-oss-assets.mjs` 重生成，不该拿补丁打 | 同左 | 清单是好的（4506 条 OSS），`tools/` 那两个 hunk 可打 |
 
 所以带宽从 183 KB/s 涨到实测 567 KB/s，**不能**记在"压缩丢了"头上（压缩在）。目前能确认少掉的只有
 `index.html` 那一层（CSS/JS/字体回到 node 出口）+ 0.1.3 本身更重；剩下要归因还得先开按路径日志。
