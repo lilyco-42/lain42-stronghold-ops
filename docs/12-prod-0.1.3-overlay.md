@@ -49,6 +49,23 @@
 所以带宽从 183 KB/s 涨到实测 567 KB/s，**不能**记在"压缩丢了"头上（压缩在）。目前能确认少掉的只有
 `index.html` 那一层（CSS/JS/字体回到 node 出口）+ 0.1.3 本身更重；剩下要归因还得先开按路径日志。
 
+### 2c. 重放之前的只读预检（已跑通，结论是"可以重放"）
+
+`scripts/check-frontend-oss-mirror.py` 会在**临时副本**上打 03b，然后逐个验证 OSS 能不能接管：
+
+```
+python3 scripts/check-frontend-oss-mirror.py --tree D:/Code/Stronghold-Protocol-upstream
+```
+
+实测输出：**22/22 可安全重放**，`补丁后 index.html` 里 Google 字体主机 **0** 次；
+其中 `fonts/fonts.css` 与线上不同，但脚本判定为"只差 CDN 前缀改写"（把绝对前缀还原成 `/` 后与活文件逐字节相同）——
+这正是当初 `apply-oss-assets` 做的改写，不是旧内容。其余 21 个对象与线上活文件**逐字节相同**，
+说明 0.1.3 没动这批 css/js，重放不会带出旧样式。
+
+脚本本身可证伪：把补丁里某个键改成 `app/css/theme-DOES-NOT-EXIST.css` 再跑，输出 `可安全重放：21/22`、
+`✗ css/theme-DOES-NOT-EXIST.css → HEAD 404`、rc=1 并明确写"先别动 public/index.html"。
+它只读：不写游戏仓库（补丁打在 `tempfile.mkdtemp` 里）、不写线上、不写 OSS。
+
 重放 03 的两种方式（都要人点头，因为 `public/index.html` 是热文件）：
 上游 checkout 上 `patch -p1 < patches/game/03-frontend-to-oss.patch` 是干净可用的；
 但若想在**带字体镜像的 fork 分支**上打，先重新生成该补丁（现在靠 fuzz 2 命中，属于迟早会碎的运气）。

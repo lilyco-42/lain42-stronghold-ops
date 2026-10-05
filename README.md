@@ -94,6 +94,7 @@ scripts/
   build-oss-app.py           生成「指向 OSS 的前端副本」（含逃逸路径校验）
   patch-pingap-sim-cors.py   给 pingap 加 /sim CORS location（幂等 + 校验 + 回滚）
   patch-sp-data-compress.py  给 pingap 加 /data 压缩 location
+  check-frontend-oss-mirror.py  重放 03b 之前的只读预检：逐个 HEAD OSS 并与线上比字节（可证伪：改一个键就 rc=1）
   patch-lobby-skip-email-verify.py   大厅注册开关改读 site.json（幂等，兼容 CRLF，支持 --dry-run）
   test-patch-lobby-skip-email-verify.py  上面那个脚本的回归测试（28 项，不需要线上文件）
   fix-missing-spine.py       从上游仓库补 17 个缺失素材
