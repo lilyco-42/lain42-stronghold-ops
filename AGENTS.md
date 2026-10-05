@@ -92,5 +92,9 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
   两份都还是 **2 次 `fonts.googleapis.com` + 1 次 `fonts.gstatic.com` + 本地样式表 0 次** —— 这就是"镜像还没到玩家手里"的直接证据。
   ⚠️ Git Bash 会把以 `/` 开头的参数改成 Windows 路径（`/webfonts/google/google.css` → `C:/Program Files/Git/…`），
   那条 0 于是变成**假 0**；跑之前必须 `export MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1`（与 `gh api /xxx` 同一族坑）。
+- **要动生产前先读 `docs/15-approval-runbook.md`**：三件待点头的事（payload 出厂、发布后拆包验收、线上重放 `03b`）
+  各自的**一条命令、今天实测的预期读数、回滚方式**都在里面；开头那条 `curl /healthz` 是只读的"现在能不能动"判别
+  （今天 15:57 → 125 人、16:37 → 164、17:08 → **180 人 / 96 场**，一路涨，不是低峰）。
+  里面也写死了：默认 `payload_url` 那份 `describe:"v0.1.3-dirty"` 会被第五道闸门拦下，所以**必须显式传 payload_url**。
 - `docs/08-resource-split-audit.md` 结论：素材层已彻底分离（清单 4451 条指向 OSS，同源只剩 8 条），
   node 只剩 `/ws` + `index.html` + `/data` + `/sim`。
