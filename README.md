@@ -53,7 +53,7 @@
 | 13 | **Spine 模型 gzip 化** | OSS 对象元数据 | 数据 | 模型传输 **86.3 → 20.0 MB（−77%）** |
 | 14 | 资源分离审计（只读） | `docs/08-resource-split-audit.md` | 结论 | 素材已全在 OSS；node 只剩 `/ws`+`index.html`+`/data`+`/sim` |
 | 15 | 客户端发布线 + 跨版本兼容 | `docs/09-client-release-line.md` | 结论 | exe/apk 装机玩家对服务器只剩 `ws`+`/healthz` |
-| 17 | 客户端字体镜像 + 零外部依赖闸门 | 游戏 fork 分支 + `tools/check-payload-offline.mjs` | **代码** | ⚠️ 源头已改，**已发布 exe/apk 仍带外链**，等新 payload（`docs/11`） |
+| 17 | 客户端字体镜像 + 零外部依赖闸门 | 游戏 fork 分支 + `tools/check-payload-offline.mjs` | **代码** | ⚠️ 源头已改、闸门已在 CI 咬过（run #11 两 job 都死在这一步）；**已发布 exe/apk 与网页版仍带外链**，等新 payload / 等 0.1.3 升级（`docs/11`） |
 | 16 | 大厅注册开关改读 `site.json` | `config.py` + `wsgi.py`（`scripts/patch-lobby-skip-email-verify.py`） | **代码** | ⚠️ **未部署**：注册从「永远 400」→ 可注册（`docs/10`） |
 
 ## 端到端效果

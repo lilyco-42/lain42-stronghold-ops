@@ -38,6 +38,29 @@ curl -s -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 
 payload 里唯一剩下的外部请求是 `https://sp.lain42.top/healthz`（自己服务器的版本探测），这是设计行为，不是字体依赖。
 
+## 5. 闸门在 CI 里真的会咬（run #11，故意让它红）
+
+用**已发布的旧 payload** `payload-v0.1.3-c5`（`sp-payload-c5.tar.gz`，213,917,927 B，`expect_app=0.1.3`）跑了一次
+`build-clients.yml`：run `37270463759` 结论 **failure**，两个 job 都恰好死在 `零外部依赖（闸门）`，之后没有跑
+`npm install`/打包（闸门放在装依赖之前，所以这次验证几乎不花分钟）。CI 原日志：
+
+```
+payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体表引用 0 个
+  ✗ index.html 引用外部字体主机 fonts.googleapis.com
+  ✗ dev/uikit.html 引用外部字体主机 fonts.googleapis.com
+  ✗ 缺自托管字体表 webfonts/google/google.css —— 镜像没进 payload？
+```
+
+同一份检查在换成本机 `payload-c8` 时是绿的（727 个文本文件、112 woff2、0 问题）—— 红/绿两边都有实测，
+闸门不是摆设。**换 payload 之后要重跑一次**，红在这一步就说明产物里还没进镜像。
+
+## 6. 网页版还没受益（要随 0.1.3 升级一起走）
+
+`curl -s https://sp.lain42.top/index.html` 实测仍有 **2 次 `fonts.googleapis.com` + 1 次 `fonts.gstatic.com`**
+（外加自托管的 `/fonts/fonts.css`）—— 因为线上跑的是 `/opt/Stronghold-Protocol` 那份 **0.1.1** checkout，
+而镜像在 fork 分支上。线上 `public/index.html` 是热文件（此刻还有 246 人 / 177 场），
+**不能**用直接编辑它的方式铺字体；只能随 0.1.3 升级在低峰窗口整份换 checkout，一并带上字体镜像。
+
 ## 4. 还没做的一步（要人点头）
 
 源头与产物闸门都已就位，但**已发布的 exe/apk 仍是旧 payload**。要出带镜像字体的新产物：
