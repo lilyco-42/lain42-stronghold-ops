@@ -77,8 +77,8 @@ node tools/check-payload-offline.mjs --zip <apk>                            # �
 node tools/check-payload-offline.mjs <exe>/resources/www                    # 出厂桌面（asar 只有 ~29.6 KB 的壳）
 ```
 
-今天的数字：合并基线后重新打的是 **payload-c9** —— 4368 文件 / 295.3 MB，`describe v0.1.3-14-gdae0a67`，
-tar `221,352,079 B`，sha256 `a421f174dae8cd9a7aa69fb687d1f8de9118f9be01a23efc25414177a4f45af7`，
+今天的数字：合并基线后重新打的是 **payload-c10** —— 4368 文件 / 295.3 MB，`describe v0.1.3-16-g603b94c`，
+tar `221,350,850 B`，sha256 `234ee9625fb844789d82289cad4f9a2bdaf491c622db8c2151eea752ff1fec36`，
 tar 内含那 2 条 corrosion BGM，离线闸门 0 问题。c8（4366 文件，`v0.1.3-8-g86719d1`）就此作废。
 
 `game-client.patch`（客户端仓库打在 payload 上的那 3 文件 7 hunk）也要跟着复验：
