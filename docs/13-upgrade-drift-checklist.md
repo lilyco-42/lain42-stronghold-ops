@@ -23,6 +23,23 @@ npm test --silent                                            # 全量（2026-10-
 ⚠️ **红几条会随负载变**（同一天里 1、2、3 条都出现过）：判据不是条数，而是"红的是不是这几条阈值闸"——
 是就单独复跑确认，不是就是真回归。**别把它们当回归，也别拿它们当通过**。
 
+### 17:11 复查：上游又动了，但**没有制造新冲突**（这条就是核对单存在的意义）
+
+```
+git fetch upstream && git rev-list --left-right --count upstream/master...HEAD   # → 1 18（本分支落后 1 个）
+git show --stat upstream/master                                                   # bce1827 #129 观战队友的手/临时整备区/装备/策略与效果
+rm -rf D:/Code/_artifacts/pristine2 && mkdir -p D:/Code/_artifacts/pristine2
+git archive upstream/master | tar -x -C D:/Code/_artifacts/pristine2
+python3 scripts/check-game-patches.py --tree D:/Code/_artifacts/pristine2 --allow-fail 04-asset-manifest-cdn
+```
+实测（**没有执行 merge**，只拿新上游树试补丁）：`01` offset 71 / `02` offset 3 / `03` clean / `03b` FUZZ 2 / `04` FAILED（容忍），rc=0 ——
+与合并上一个上游提交时的表**一模一样**，说明这次前进不引入新冲突，merge 之后大概仍是这张表。
+`bce1827` 改的是 `observe.js` / `runner.js` / `app.js` / `game.js` / `detailPanel.js` / `enemyDrawer.js` / `gameLogic.js` / `Match.js`，
+**一个都不是** `patches/game-client.patch` 动的那三个文件（`index.html` / `net.js` / `js/screens/room.js`）。
+⚠️ 但它是**观战语义**的改动，与我们的 `room.spectate` 能力判据同属一个功能面 —— 合并后除了跑全量测试，
+还要人工看一遍观战入口在"新客户端 + 旧服务器"和"新客户端 + 新服务器"两种组合下的表现（那三条 `verbAvailable` 判据没覆盖语义变化）。
+合并完记得按 §1 重跑全量、再按 §5 判据看 `git diff --name-only <payload 树>..HEAD` 决定 payload 要不要重打。
+
 ⚠️ **游戏这一侧没有 CI 兜底**（今天查清，别再按"CI 会跑"来推理）：fork 的 Actions 开关是开的
 （`/actions/permissions` → `enabled:true`，public 仓库，默认分支 `master` 上确实有 `.github/workflows/ci.yml`），
 但 workflow 从未注册 —— `/actions/workflows` 为空、`/actions/runs` 的 `total_count:0`、
