@@ -80,6 +80,7 @@
 patches/
   game/                    对游戏仓库的补丁（git diff 可直接 apply）
     01-ws-compression.patch        server/index.js —— WS 压缩
+    03b-frontend-to-oss.font-mirror.patch  给「带本地字体镜像」那棵树的前端指向 OSS（0.1.3 基线，无 fuzz）
     02-spine-accept-http-url.patch public/js/assets.js —— 接受 CDN 绝对 URL
     03-frontend-to-oss.patch       public/index.html —— 前端资源指向 OSS
     04-asset-manifest-cdn.patch    data/assets.json + tools/ —— 素材指向 CDN

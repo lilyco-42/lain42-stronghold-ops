@@ -38,6 +38,12 @@
 | `01-ws-compression` | 可打（offset 71） | 可打（offset 71） | **在**：`server/index.js:686-692` 是启用形态（`threshold: 512`、`level 1`、`memLevel 7`、双向 `NoContextTakeover`）→ **升级没把压缩弄丢** |
 | `02-spine-accept-http-url` | 可打（offset 3） | 可打（offset 3） | **在**：`public/js/assets.js:203-208` 的 `validSpine` 接受 `https?://…\.skel`，注释还留着"上游到 v0.1.3 都没修这个" |
 | `03-frontend-to-oss` | **可打，rc=0**（干净应用） | 可打但 hunk#1 靠 **fuzz 2**（字体镜像改了那几行，位置漂了） | **没了**：`grep -c dl.lain42.top public/index.html` = **0** |
+
+补了一条可复现的出路：新增 **`patches/game/03b-frontend-to-oss.font-mirror.patch`**（专给带字体镜像的树）。
+在干净的 fork 分支树上 `patch -p1 --dry-run` **无 fuzz 无 offset、rc=0**，打上后与参考文件 `cmp` 逐字节相同；
+产出的 `index.html` 实测：**26 条 `dl.lain42.top`、0 次 Google 字体主机、0 条相对 css/js**、本地字体表 1 条 ——
+即"美术走 OSS + 字体离线"两个目标同时成立。旧的 `03` 依旧用于**不带镜像的上游树**（那边它干净可打），
+两条各管各的基线；把 `03b` 打到纯净上游只能靠 fuzz 2 命中，所以别混用。
 | `04-asset-manifest-cdn` | 数据部分天生对不上（`data/assets.json` 的 hunk FAILED）—— 它是**生成物的 diff**，本来就该用 `tools/apply-oss-assets.mjs` 重生成，不该拿补丁打 | 同左 | 清单是好的（4506 条 OSS），`tools/` 那两个 hunk 可打 |
 
 所以带宽从 183 KB/s 涨到实测 567 KB/s，**不能**记在"压缩丢了"头上（压缩在）。目前能确认少掉的只有
