@@ -53,5 +53,10 @@ print(\"oss urls\", len(u)); print(\"sample\", u[0])
 3. 让部署**可切 commit**：把当前工作树收成一个 commit（或至少留 `index.html` / `assets.json` 的 `.bak-<日期>`）。
    现在 238 个 `M` 没备份，回滚只能靠反向 `git diff`。
 4. 开 pingap 按路径访问日志，否则"谁在吃带宽"永远只能推。
-5. 好消息可以确认掉：`/healthz.app` 现在是 **0.1.3**，已发布的 `v0.1.3-compat` 客户端会自己识别到，
-   观战 / 踢人 / 移出观战三处灰掉的入口应当解禁 —— 这是跨版本机制设计内的行为，不用再动客户端。
+5. 好消息已经**实测确认**（不是推断）：把新 payload 用纯静态服务起在 `127.0.0.1:47901`，在真 Chromium 里
+   按应用自己的方式 `new Net({})` 再 `_probeServerInfo()`，结果：
+   `serverKey = wss://sp.lain42.top/ws`、`healthUrl = https://sp.lain42.top/healthz`（跨源能读，靠 `sp_healthz_cors`）、
+   **`serverApp = "0.1.3"`**，于是 `verbAvailable()` 对 `room.spectate` / `room.kick` / `room.removeSpectator`
+   三个全部回到 `{ok:true, reason:null}`（线上还是 0.1.1 时它们是 `older-server` 灰掉），
+   `serverLacks(...,'room.spectate') = false`。同一次读数里 `humans` 已从重启后的 13 回到 36、`matches` 23。
+   这就是"客户端自动识别服务端版本并应用"设计内的行为，**不需要改客户端**。
