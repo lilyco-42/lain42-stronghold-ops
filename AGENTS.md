@@ -50,6 +50,11 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
 - CI 结论用 `gh run view --json conclusion`，**`gh run watch` 的 shell 退出码不是结论**（末尾接 `tail` 就变成 tail 的退出码）。
 - 产物要下载拆开验（asar 里的函数名、payload 里的标记、APK 里的开关、asset `digest` == 本机 `sha256sum`）。
 - 测试写完要做**变异验证**（故意把脚本改坏，确认对应检查真的变红），否则检查可能是空的。
+- 任何"探测器"必须自带**正控制**：今天写的线级能力探测第一版全返回 TIMEOUT，我误判成"服务器不回 rid"（其实回了），
+  真正原因没人猜得到 —— `hello` 里的 `name` 太长（`'CapabilityProbe'`）服务器直接不回 welcome，换成 `'Probe'` 就通。
+  是末尾那个"自造动词本该 unknown"的正控制没过，才逼我去看真实事件流。探测类脚本没有正控制就等于在报自己的 bug。
+- 版本号不是能力：`/healthz.app` 说 0.1.3 也可能 `room.spectate` 回 `unknown type`（混合部署）。能力要用
+  `scripts/probe-server-capability.mjs` 看 verdict，别拿 `app` 字段当结论。
 
 ## 5. 当前状态（2026-10-05）
 
@@ -61,6 +66,8 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
   fork 分支已合并上游 `bd892a4`（merge commit `dae0a67`，0 behind），待发布的 payload 是 **c9**
   （`v0.1.3-14-gdae0a67`，sha256 `a421f174…45af7`）。换基线之后怎么核对，见 `docs/13-upgrade-drift-checklist.md`。
 - 大厅注册 400 的修复**代码已备好、回归测试全绿、线上未部署**：`docs/10-lobby-register-400.md`。
+- 线上是**混合版本**：`server/` 已 0.1.3、`shared/protocol.js` 还是 0.1.1，所以三个 0.1.3 动词在线上是拒收的
+  （客户端会点一次才学会灰）。诊断与复现命令在 `docs/12-prod-0.1.3-overlay.md` §5；换基线后的整套核对在 `docs/13`。
 - 大厅 `wsgi.py` 一天里被外部改过两次（13:48 变全 LF、14:10 再变，md5 `24c6a6eb…`→`43c3b939…`→`3918ab4b…`），
   `config.py` 未变（`b2c9493a…`）；`patch-lobby-skip-email-verify.py --dry-run` 在最新字节上重跑仍 rc=0（见 `docs/10` 末节）。
   **推论**：动大厅前必须重新 `--dry-run` + `md5sum`，不能沿用早上的结论。
