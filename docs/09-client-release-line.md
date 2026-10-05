@@ -22,7 +22,7 @@ CI 现在一共**四道**闸门（两个 job 各两遍），顺序就是防御�
 |---|---|---|---|
 | 1 | `校验 payload 完整性` | 四个必需文件在不在、素材数 >3000 | — |
 | 2 | `校验 payload 版本（闸门）` | `build.json.game.app` 对 `expect_app`（或本仓库 `version`）+ `server` 输入 | run #4 就是死在这（payload 停在 0.1.1） |
-| 3 | `零外部依赖（闸门）` | **暂存 payload**：外部字体主机 / CDN 绝对地址 / 字体镜像完整性 | run `37270463759`（故意用旧 payload 跑的）两个 job 都红在这一步 |
+| 3 | `零外部依赖（闸门）` | **暂存 payload**：任何**站外引用形式**（href/src/url()/fetch/@import/`new WebSocket('http…')`）/ CDN 绝对地址 / 字体镜像完整性 | run `37270463759`（故意用旧 payload 跑的）两个 job 都红在这一步 |
 | 4 | `零外部依赖（产物内，闸门）` | **出厂字节**：桌面扫 `resources/www`，APK 用 `--zip` 按条目扫 | 本地对已发布的旧 exe/APK 跑是红的；新产物还没经 CI 出过 |
 
 第 4 道为什么要存在（两条实测）：桌面 `app.asar` 只有 29,619 B（游戏 www 在它旁边），
@@ -59,3 +59,8 @@ CI 现在一共**四道**闸门（两个 job 各两遍），顺序就是防御�
 下一轮服务器侧要做的（都需要窗口/点头）：在新 0.1.3 上重做"前端指向 OSS"（`scripts/build-oss-app.py` + 并行
 `index-oss.html` 验证，`public/index.html` 是热文件）、把字体镜像带上（fork 分支 `86719d1`）、把部署收成可切的
 commit，以及开 pingap 的按路径访问日志（`docs/08` 的测量缺口）。
+
+> 规则 3 后来从"禁两个字体主机字面量"扩成"禁一切站外引用形式"（客户端仓库 `check-payload-offline.mjs`）。
+> 判的是**引用形式**而不是裸 URL：payload-c10 的 727 个文本文件里有 27 处 wikipedia、19 处 github.com、
+> 17 处 `xmlns="http://www.w3.org/2000/svg"` —— 全在注释或标识符里，不构成请求，实测引用形式命中 **0**。
+> 别去"修"那些注释链接，那是噪音；要盯的是新增的 `src=`/`href=`/`fetch(`。
