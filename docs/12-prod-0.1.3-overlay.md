@@ -61,6 +61,22 @@
 
 ### 2c. 重放之前的只读预检（已跑通，结论是"可以重放"）
 
+**2026-10-05 16:36 又补了两项在真线上做的只读测量**，它们把重放前仅剩的两个假设消掉了：
+
+1. **线上没有任何 CSP 头**：`curl -sI https://sp.lain42.top/index.html` 只有
+   `X-Content-Type-Options: nosniff` + `Referrer-Policy: same-origin`（`Content-Length: 6304`，`Cache-Control: no-cache`）。
+   所以"改成自托管字体会不会被 `font-src` 拦掉"这个问题不存在 —— 拦不了，也没东西可拦。
+2. **同一个前端今天就在发无扩展名以外的自托管字体**：`/fonts/fonts.css` → 200 / `text/css; charset=utf-8` /
+   `public, max-age=86400`；它引用的某个 `.woff2` → 200 / **`font/woff2`** / `public, max-age=86400`。
+   也就是说 `/webfonts/google/*` 走同一套 mime 与长缓存路径在线上是被验证过的行为，不是新行为。
+   归属判断的依据是字符串本身：`public, max-age=86400` 与 `server/index.js` 里 `LONG_CACHE` 常量逐字节相同，
+   `font/woff2` 也来自那张 mime 表，所以这两个头来自 node。
+   ⚠️ 但这**不能证明** `pingap` 不会在别处另加头 —— 它没有按路径访问日志（见 §3 那条），要完全排除只能靠实测响应，
+   而上面第 1 条恰好就是实测响应：整条链路上没有 CSP。重放 `03b` 因此不需要动 `pingap`。
+
+这两条只读数与游戏仓库里新加的 `test/webfonts-serve.test.js`（本地起 `createStaticHandler`，同样钉
+`text/css` / `font/woff2` / `max-age=86400` / 点路径一律拒）互相印证：一个证本机代码，一个证线上前端。
+
 `scripts/check-frontend-oss-mirror.py` 会在**临时副本**上打 03b，然后逐个验证 OSS 能不能接管：
 
 ```
