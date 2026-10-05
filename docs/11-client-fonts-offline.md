@@ -61,6 +61,26 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 而镜像在 fork 分支上。线上 `public/index.html` 是热文件（此刻还有 246 人 / 177 场），
 **不能**用直接编辑它的方式铺字体；只能随 0.1.3 升级在低峰窗口整份换 checkout，一并带上字体镜像。
 
+## 7. 两个宿主各自怎么验的（换 payload 后照抄这张表）
+
+| 宿主 | 这条怎么测 | 实测 |
+|---|---|---|
+| 打包桌面（Electron 自带文件服务器） | 用 `desktop/serve.mjs` 的 `createStaticServer({ root: payload })` 起真实壳，再请求镜像 | `/webfonts/google/google.css` → **200 / `text/css` / `public, max-age=86400`**，421 个 `@font-face`、远程主机引用 **0**；`.woff2` → **200 / `font/woff2`**、magic `wOF2`；`index.html` → `no-cache`；不存在的音轨 → 404（没有把 404 伪装成 200） |
+| 打包安卓（Capacitor 纯静态 `www/`） | Capacitor 就是把 `www/` 按根目录静态发出去，所以用**没有别名的纯静态服务**当等价lane（当初 `/media` 那个坑也是这么抓出来的），在真 Chromium 里看网络 | 对 `fonts.googleapis` / `fonts.gstatic` **0 请求**；21 个字体请求全部来自 `127.0.0.1`；`document.fonts` 424 face 已加载；Rajdhani 与回退字体度量不同（649.09 vs 755.98 px），说明镜像确实在用而不是回退 |
+| 网页版 | `curl -s https://sp.lain42.top/index.html \| grep -c fonts.googleapis.com` | **仍是 2 次外链**（0.1.1 热文件，未动） |
+
+`android` 那条是**等价 lane 而非 APK 实测**——APK 要真机/模拟器才算摸过；这条区分在 `AGENTS.md` 的证据一节里也是硬要求。
+
+## 8. 换机器复现这份 payload（不需要碰生产）
+
+`public/assets|fonts|vendor` 和 `data/local-assets.json` 都不在 git 里，所以干净的 clone 一张美术都没有。
+可复现路径：把 CI 现在读的**已发布 payload** 解出来当素材源（`sp-payload-c5.tar.gz`，213,917,927 B，
+sha256 `de86c682da9cf32eb27dd95615e08e1cabefe3f889b811e2ec2f85e2a04ded80`），
+把 `assets/`、`fonts/`、`vendor/`、`webfonts/` 之外的素材目录拷进游戏 checkout，
+再 `node tools/package-client.mjs --server sp.lain42.top --game <checkout> --out <dir>`。
+
+本机这条已经验过包含关系：`payload-c6 ⊃ www-c5`，**0 个文件丢失**、只多了 113 个（字体镜像 112 + `google.css`）。
+
 ## 4. 还没做的一步（要人点头）
 
 源头与产物闸门都已就位，但**已发布的 exe/apk 仍是旧 payload**。要出带镜像字体的新产物：
