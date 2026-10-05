@@ -110,14 +110,15 @@ sha256 `de86c682da9cf32eb27dd95615e08e1cabefe3f889b811e2ec2f85e2a04ded80`），
 
 ```
 # payload 已在本机备好（不要覆盖已发布资产，一律新 tag / 新文件名）
-D:/Code/_artifacts/sp-client-payload-0.1.3-c8.tar.gz
-  218,916,336 B  sha256 d31f7d3c8f8b357f9d285d843dd20b694cd37a9b66ac70d3a3911ae7996caa04
-  build.json: game.app=0.1.3, describe=v0.1.3-8-g86719d1, protocol=1
+D:/Code/_artifacts/sp-client-payload-0.1.3-c9.tar.gz
+  221,352,079 B  sha256 a421f174dae8cd9a7aa69fb687d1f8de9118f9be01a23efc25414177a4f45af7
+  build.json: game.app=0.1.3, describe=v0.1.3-14-gdae0a67, protocol=1, 4368 文件 / 295.3 MB
+  （c8 = 4366 文件 / v0.1.3-8-g86719d1 已作废：合并上游 bd892a4 之后它是旧基线，缺 #110 的 2 条 BGM）
 
-gh release create payload-v0.1.3-c8 --draft=false --title 'payload v0.1.3-c8（字体镜像）' \
-  D:/Code/_artifacts/sp-client-payload-0.1.3-c8.tar.gz
+gh release create payload-v0.1.3-c9 --draft=false --title 'payload v0.1.3-c9（字体镜像 + 0.1.3 最新基线）' \
+  D:/Code/_artifacts/sp-client-payload-0.1.3-c9.tar.gz
 gh workflow run build-clients.yml -R lilyco-42/StrongholdProtocolClient \
-  -f payload_url='https://github.com/lilyco-42/StrongholdProtocolClient/releases/download/payload-v0.1.3-c8/sp-client-payload-0.1.3-c8.tar.gz' \
+  -f payload_url='https://github.com/lilyco-42/StrongholdProtocolClient/releases/download/payload-v0.1.3-c9/sp-client-payload-0.1.3-c9.tar.gz' \
   -f server=sp.lain42.top -f expect_app=0.1.3
 ```
 

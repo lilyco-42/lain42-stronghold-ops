@@ -57,7 +57,9 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
   命中 13 处，可 `git log` 仍停在 `8b10625`、238 个 `M`、没留备份）。那次部署把 `public/index.html` 换回上游版，
   OSS 前端改写与字体镜像一起没了；素材清单没受影响（4506 条 OSS）。全在 `docs/12-prod-0.1.3-overlay.md`。
   `PROTOCOL_VERSION` 三个版本都是 1 → 升不升级**不能**靠 socket 协商。
-- 客户端已发布跨版本兼容产物（见客户端仓库 Release `v0.1.3-compat` 与 `docs/09-client-release-line.md`）。
+- 客户端已发布跨版本兼容产物（见客户端仓库 Release `v0.1.3-compat` 与 `docs/09-client-release-line.md`）；
+  fork 分支已合并上游 `bd892a4`（merge commit `dae0a67`，0 behind），待发布的 payload 是 **c9**
+  （`v0.1.3-14-gdae0a67`，sha256 `a421f174…45af7`）。换基线之后怎么核对，见 `docs/13-upgrade-drift-checklist.md`。
 - 大厅注册 400 的修复**代码已备好、回归测试全绿、线上未部署**：`docs/10-lobby-register-400.md`。
 - 大厅 `wsgi.py` 一天里被外部改过两次（13:48 变全 LF、14:10 再变，md5 `24c6a6eb…`→`43c3b939…`→`3918ab4b…`），
   `config.py` 未变（`b2c9493a…`）；`patch-lobby-skip-email-verify.py --dry-run` 在最新字节上重跑仍 rc=0（见 `docs/10` 末节）。

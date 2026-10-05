@@ -122,6 +122,7 @@ docs/
   10-lobby-register-400.md   大厅注册永远 400（代码已备好，线上未部署）
   11-client-fonts-offline.md 客户端字体离线化：112 个 woff2 逐字节镜像（闸门已就位，产物待发）
   12-prod-0.1.3-overlay.md    线上覆盖式升 0.1.3：什么活下来、什么丢了、单行 JSON 上 grep -c 会数成行数
+  13-upgrade-drift-checklist.md 换基线之后的漂移核对单：合并/测试/补素材/补丁预检/闸门，命令都实跑过
 
 AGENTS.md                   AI 协作契约：机器/仓库地图、红线、补丁脚本五条不变量、什么才算证据
 ```
