@@ -73,7 +73,7 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 > `the shell serves the mirrored font sheet the way a font host does (mime + long cache, and no escape)`
 > 钉住 `LONG_CACHE_DIRS` 里必须有 `webfonts`、css/woff2 的 mime、`index.html` **不得**继承长缓存（正控制，
 > 防止"全都长缓存"也能让前四条全绿），以及 `/webfonts/google/../../../../../../windows/win.ini` 必须非 200。
-> 本机整跑 **74/74**（2026-10-05 16:21 CST）。
+> 本机整跑 **75/75**（2026-10-05 16:53 CST；16:21 那次是 74，之后又加了 `payload 出处` 那道闸门的测试）。
 > **网页版那一侧也补上了**（游戏仓库 `test/webfonts-serve.test.js`，16:30）：直接对 `server/index.js` 的
 > `createStaticHandler` 起服务，钉住 `/webfonts/google/google.css` → 200 / `text/css` / `max-age=86400` / 455,869 B /
 > 含 `font-display: swap` / 无远程地址；切片 → 200 / `font/woff2` / magic `wOF2`（HEAD 也 200）；
