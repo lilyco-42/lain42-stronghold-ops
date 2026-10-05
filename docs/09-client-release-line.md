@@ -70,6 +70,32 @@ CI 现在一共**五道**闸门（两个 job 各跑一遍），顺序就是防�
 上传当时因为拥塞中断在 ~129 MB，所以帖子指向 Windows 那条链接一直是坏的。
 `scripts/oss-put-client.sh <目录> <版本号>` 要**两个文件都在**才会跑（缺就 exit 2），传完必须 HTTP 回读比 sha256。
 
+## 已出厂：payload-c12 + 第三条产物路 iOS（2026-10-06 00:2x）
+
+c12 = c11 的选择页再改一次：**首次启动把实测能连的五台网友服播种进玩家自己的可删列表**
+（`COMMUNITY_SERVERS` + `SEED_VERSION` + `sp.shell.seed` 标记）。与 c11 的暂存目录 `diff -rq` 只差那两个 shell 文件，
+`build.json` 完全相同（基线还是 `v0.1.3-23-g095f619`），tar 只大 73 B（221,352,311 B，sha256 `b6f1c62c…99e27`）。
+CI run `37349308872` 三条 job 全绿。GitHub Release `v0.1.3-c12` 三个资产（digest 全部 == 本机 `sha256sum`）：
+
+| 产物 | 大小 | sha256 |
+|---|---|---|
+| `StrongholdProtocol-desktop-win-x64-0.1.3-c12.zip` | 360,851,677 B | `15929a11f891370c6c6e1c914fecb557a386b9ee0d6586f5f804eda1093144fd` |
+| `Stronghold-0.1.3-c12-android-debug.apk` | 232,322,387 B | `69fbdfaea3c945cf8c1a27b029828c884bc7de275dc23d4d394a002fcd426a07` |
+| `Stronghold-0.1.3-c12-ios-unsigned.ipa` | 222,953,941 B | `90577c6f62d08c6246e1d38124a06f33508ac90c1f461a794aa177b4ef96539d` |
+
+⚠️ **c12 只有 GitHub 这一条路**：传 OSS 那一步撞上账号停用（见 `docs/16`），所以下载清单还停在 c11、
+README 的产物数字也还是 c11；恢复后要补的三件事写在 `docs/16` §5。
+
+**iOS 是第三条产物路，交付物是未签名 .ipa**（细节在客户端仓库 `docs/PACKAGING.md` §5.5）：CI 的 `ios` job 跑在
+`macos-latest`（本仓库 PUBLIC，不额外计费），`xcodebuild … CODE_SIGNING_ALLOWED=NO` 出 `.app`，
+`Payload/App.app` 压成 .ipa，玩家用自己的免费 Apple ID 签（7 天到期、最多 3 个自签应用）。
+包内实测：`picker.js` 29,785 B `45220e2d…`、`picker-core.js` 10,650 B `1cc58b20…`（等于仓库源码）、
+`Info.plist` 的 ATS 放开明文 + 只横屏 + 状态栏隐藏、`CFBundleShortVersionString 0.1.3 / 103`。
+两个只有 macOS 才会踩的坑记在 `docs/16` 之外也写进了客户端 AGENTS：① 模板**不带共享 scheme**，
+纯 CI 环境 `xcodebuild -scheme App` 找不到 → 必须把 `App.xcscheme` 提交进仓库；
+② `/bin/bash` 3.2 会把 `$WWW（` 里的全角括号并进变量名，`set -u` 当场炸（Linux/Windows runner 上同样写法躲得过）
+→ workflow 里变量紧邻非 ASCII 一律 `${NAME}`，并有测试扫这条。
+
 ## 服务器侧现状（2026-10-05 14:20 之后）
 
 线上 `/healthz.app` 已经是 **0.1.3**（`stronghold` 14:20:24、14:26:09，15:33:25 CST 又重启过一次），
