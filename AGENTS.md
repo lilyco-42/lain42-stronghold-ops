@@ -77,5 +77,11 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
   config `b2c9493a…`、`data/site.json` `b0bdd7d2…` → `patch-lobby-skip-email-verify.py --dry-run` **rc=0**
   （config.py 第 70 行后插 2 行、wsgi.py 第 109 行替换 1 行），回归测试 **0 check(s) failed**（含"用线上 site.json 注册 → 201"）。
   **推论**：动大厅前必须重新 `--dry-run` + `md5sum`，不能沿用早上的结论。
+- **已发布产物的入口页可以不下整包抽查**（zip 尾部中央目录 + 单条 Range，约 1 MB 传输）：`docs/14-published-artifact-spotcheck.md`
+  与 `scripts/spotcheck-release-entry.py`。2026-10-05 16:09 实测 tag `v0.1.3-compat`：桌面 zip（353,439,776 B）里的
+  `…/resources/www/index.html` 与 APK（224,848,906 B）里的 `assets/public/index.html` **未压缩都是 6,684 B**，
+  两份都还是 **2 次 `fonts.googleapis.com` + 1 次 `fonts.gstatic.com` + 本地样式表 0 次** —— 这就是"镜像还没到玩家手里"的直接证据。
+  ⚠️ Git Bash 会把以 `/` 开头的参数改成 Windows 路径（`/webfonts/google/google.css` → `C:/Program Files/Git/…`），
+  那条 0 于是变成**假 0**；跑之前必须 `export MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1`（与 `gh api /xxx` 同一族坑）。
 - `docs/08-resource-split-audit.md` 结论：素材层已彻底分离（清单 4451 条指向 OSS，同源只剩 8 条），
   node 只剩 `/ws` + `index.html` + `/data` + `/sim`。
