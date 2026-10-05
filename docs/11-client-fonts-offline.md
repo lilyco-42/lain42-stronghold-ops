@@ -175,27 +175,38 @@ comm -13 a.list b.list | awk -F/ '{print $1}' | sort | uniq -c   # 多出来的�
 滤法要么加 `-e '^$'`，要么先 `grep -v '/$'` 再做 `sed`。
 c5 里 `grep -c webfonts` 是 **0**（镜像是 c5 之后才进 payload 的），所以"多出 113 个 webfonts"这条从一开始就成立。
 
-## 9. 还没做的一步（要人点头）
+## 9. 出厂记录（2026-10-05 22:37 之后已完成）
 
-源头与产物闸门都已就位，但**已发布的 exe/apk 仍是旧 payload**。要出带镜像字体的新产物：
+**出厂的是 c11，不是 c10**。c10 那份 tar 只在本机
+（`D:/Code/_artifacts/sp-client-payload-0.1.3-c10.tar.gz`，221,350,850 B，
+sha256 234ee9625fb844789d82289cad4f9a2bdaf491c622db8c2151eea752ff1fec36，基线 `v0.1.3-16-g603b94c`，4368 文件 / 295.3 MB），
+**从未建过 Release**（`gh release list` 里只有 `payload-v0.1.3-c11` 与更早的 c5/c4/c2/compat）。原因：c10 切完之后
+客户端仓库又改了选择页（`shell/picker.js` + `picker-core.js`），而这两个文件是打包时逐字复制进 payload 的 ——
+发 c10 等于把这条修复留在家里。（c8 = 4366 文件 / `v0.1.3-8-g86719d1` 更早作废：合并上游 `bd892a4` 后它是旧基线，缺 #110 的 2 条 BGM。）
+
+c11 与 c10 的暂存目录 `diff -rq` 只有 3 个文件不同：`build.json`（基线 603b94c → 095f619，这 7 个提交只动
+`AGENTS.md` 与 `test/`，`public/` 命中 0）+ 那两个 shell 文件；文件数仍然 4368，tar 只大 1,388 B。
+
+命令模板（**别覆盖已发布资产，一律新 tag / 新文件名**；`gh release create` 在非 git 目录必须带 `-R`）：
 
 ```
-# payload 已在本机备好（不要覆盖已发布资产，一律新 tag / 新文件名）
-D:/Code/_artifacts/sp-client-payload-0.1.3-c10.tar.gz
-  221,350,850 B  sha256 234ee9625fb844789d82289cad4f9a2bdaf491c622db8c2151eea752ff1fec36
-  build.json: game.app=0.1.3, describe=v0.1.3-16-g603b94c, protocol=1, 4368 文件 / 295.3 MB
-  （c8 = 4366 文件 / v0.1.3-8-g86719d1 已作废：合并上游 bd892a4 之后它是旧基线，缺 #110 的 2 条 BGM）
-
-gh release create payload-v0.1.3-c10 --draft=false --title 'payload v0.1.3-c10（字体镜像 + 0.1.3 最新基线）' \
-  D:/Code/_artifacts/sp-client-payload-0.1.3-c10.tar.gz
+node tools/package-client.mjs --server sp.lain42.top --game D:/Code/Stronghold-Protocol-upstream \
+  --out D:/Code/_artifacts/payload-c11
+node tools/check-payload-provenance.mjs D:/Code/_artifacts/payload-c11     # 期望 rc=0
+node tools/check-payload-offline.mjs    D:/Code/_artifacts/payload-c11     # 期望 rc=0
+gh release create payload-v0.1.3-c11 -R lilyco-42/StrongholdProtocolClient --draft=false \
+  --title 'payload v0.1.3-c11（字体镜像 + 选择页探测修复）' <tar.gz>
 gh workflow run build-clients.yml -R lilyco-42/StrongholdProtocolClient \
-  -f payload_url='https://github.com/lilyco-42/StrongholdProtocolClient/releases/download/payload-v0.1.3-c10/sp-client-payload-0.1.3-c10.tar.gz' \
+  -f payload_url='https://github.com/lilyco-42/StrongholdProtocolClient/releases/download/payload-v0.1.3-c11/sp-client-payload-0.1.3-c11.tar.gz' \
   -f server=sp.lain42.top -f expect_app=0.1.3
 ```
 
 draft 的 Release 资产匿名访问是 403，CI 拉不到 —— 建完要么直接非 draft，要么记得 `gh release edit --draft=false`。
 跑完照旧：结论看 `gh run view --json conclusion`，产物**下载拆开**验 `webfonts/google/google.css` 在 asar/APK 里、
 `fonts.googleapis` 计数为 0、`resolveMediaPath`（桌面）、`__SP_MEDIA_ALIAS__ = false`（安卓）。
+今天这两条对 c11 的**两个产物**都做了：桌面 zip 与 APK 里的 `js/shell/picker.js` 都是 `f06a8a86…0e02cdb`
+（等于客户端仓库 `main` 的源码），入口页 Google 字体主机计数 0、`/webfonts/google/google.css` 引用 1 次。
+全链数字与复核命令在 **`docs/09` 的「已出厂：payload-c11」一节**。
 
 上线口径（`/opt/Stronghold-Protocol`）也顺带说明：那份是热文件，网页玩家直接命中，**不能**用编辑线上文件的方式
 铺字体镜像 —— 要么随 0.1.3 升级一起在低峰窗口换 checkout，要么先只在客户端线上用。

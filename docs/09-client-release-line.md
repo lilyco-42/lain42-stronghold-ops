@@ -24,7 +24,7 @@ CI 现在一共**五道**闸门（两个 job 各跑一遍），顺序就是防�
 | 2 | `校验 payload 版本（闸门）` | `build.json.game.app` 对 `expect_app`（或本仓库 `version`）+ `server` 输入 | run #4 就是死在这（payload 停在 0.1.1） |
 | 2b | `payload 出处（闸门）`（`tools/check-payload-provenance.mjs`） | `build.json.game.dirty` 必须是 `false`，且 `describe` 末尾要有 `-g<7+ 位 hex>` | **今天新增，起因是实测不是回归**：默认 `payload_url` 那份（OSS，15:40:49 CST 被换过，195,809,375 B）里 `describe="v0.1.3-dirty"`、`dirty:true`，版本闸门与离线闸门都会放行它 —— 没有这道闸门，CI 会绿着发一个追不到 commit 的 exe/apk |
 | 3 | `零外部依赖（闸门）` | **暂存 payload**：任何**站外引用形式**（href/src/srcset/imagesrcset/poster/action、CSS `url()` 与 `@import`、`fetch`/`import`/`axios.get`、`new WebSocket('http…')`、`xhr.open('GET',…)`、`navigator.sendBeacon`，**含省略 scheme 的协议相对写法 `//host/…`**）/ CDN 绝对地址 / 字体镜像完整性 | run `37270463759`（故意用旧 payload 跑的）两个 job 都红在这一步 |
-| 4 | `零外部依赖（产物内，闸门）` | **出厂字节**：桌面扫 `resources/www`，APK 用 `--zip` 按条目扫 | 本地对已发布的旧 exe/APK 跑是红的；新产物还没经 CI 出过 |
+| 4 | `零外部依赖（产物内，闸门）` | **出厂字节**：桌面扫 `resources/www`，APK 用 `--zip` 按条目扫 | 本地对已发布的旧 exe/APK 跑是红的。**run `37326170288`（c11）两个 job 都在这道绿**：桌面 727 文本文件、APK 按条目 729 个，woff2 各 112 / 引用各 112 |
 
 第 4 道为什么要存在（两条实测）：桌面 `app.asar` 只有 29,619 B（游戏 www 在它旁边），
 而 APK 的 `assets/public/**` 是 deflate 条目 —— **整包 grep 字体主机 0 命中，解开条目才有 2 次**。
@@ -43,7 +43,32 @@ CI 现在一共**五道**闸门（两个 job 各跑一遍），顺序就是防�
 - 新动词打到老服务器：`shared/protocol.js`/`server/net.js:588` 回 `BAD_MSG` + **`unknown type <verb>`**
   （`server/lobby.js:296` 那句 `unhandled type` 只有"表里有、switch 没接"才走得到）。
 - 唯一可用版本信号是 `GET /healthz` 的 `app`（我们这台靠 pingap 的 `sp_healthz_cors` 才可跨源读；自建服没开 CORS 时
-  读不到 → 客户端必须乐观放行，不能锁功能）。实测矩阵与已发布产物见客户端仓库 Release `v0.1.3-compat`。
+  读不到 → 客户端必须乐观放行，不能锁功能）。实测矩阵见客户端仓库；**当前对玩家发布的产物是 Release `v0.1.3-c11`**
+  （`v0.1.3-compat` 仍在，别删，QQ/B 站的旧帖子在引用它）。
+
+## 已出厂：payload-c11 → exe + apk（2026-10-05 22:37~22:5x CST）
+
+| 环节 | 实测值 | 怎么复核 |
+|---|---|---|
+| 基线 checkout | `v0.1.3-23-g095f619`，`dirty=false`，`git status --porcelain` 空 | `git -C D:/Code/Stronghold-Protocol-upstream describe --tags --always --dirty` |
+| 暂存 payload | 4368 文件 / 295.3 MB，`--server sp.lain42.top`；与 c10 **逐字节只差 3 个文件**（`build.json` + `js/shell/picker.js` + `js/shell/picker-core.js`），文件名清单双向差 0/0 | `diff -rq /d/Code/_artifacts/payload-c10 /d/Code/_artifacts/payload-c11` |
+| 本机两道闸门 | provenance rc=0、offline rc=0（727 文本文件 / 112 woff2 / 112 引用） | `node tools/check-payload-provenance.mjs <dir>`、`node tools/check-payload-offline.mjs <dir>` |
+| payload tar | `sp-client-payload-0.1.3-c11.tar.gz` 221,352,238 B（比 c10 大 1,388 B，就是选择页那点改动），sha256 见 Release digest | `tar -tzf` 条目 5156，布局 `./index.html` |
+| Release | tag `payload-v0.1.3-c11`，**非 draft**，GitHub `digest` == 本机 `sha256sum`，匿名 HEAD 200 + 全长 | `gh api repos/lilyco-42/StrongholdProtocolClient/releases/tags/payload-v0.1.3-c11 --jq '.assets[].digest'` |
+| CI | run `37326170288`，`payload_url` 显式指 c11 + `server=sp.lain42.top` + `expect_app=0.1.3`；desktop 4m25s、android 1m50s，两个 job 都 success，五道闸门全过 | `gh run view 37326170288 --json conclusion,jobs` |
+| 产物（下载拆开验过） | 桌面 zip 360,850,482 B，APK 232,320,951 B；两处 `js/shell/picker.js` 都是 `f06a8a86…0e02cdb`、`picker-core.js` 都是 `e1bde54f…16ff88e`，与客户端仓库 `main` 的源码**逐字节相同**；入口页 Google 字体主机计数 0、引用 `/webfonts/google/google.css` 1 次；`runtime-config.js` 指 `sp.lain42.top`，APK 里 `__SP_MEDIA_ALIAS__ = false` | `python3 - <<PY` 用 `zipfile` 只读那几条条目（别整包解开） |
+
+⚠️ 两个坑，都撞过：
+1. `gh release create` 在**非 git 目录**里跑要先 `-R <owner>/<repo>`，否则它去问 git 拿仓库，报 `failed to run git: fatal: not a git repository`（第一次就是这么失败的，资产没上传，直接重跑即可）。
+2. 玩家 Release 的 tag 形如 `v0.1.3-*` 会**匹配 `on: push: tags: v*`**，建 Release 就等于再触发一次全矩阵 —— 那一发用的是
+   默认 `payload_url`（OSS 那份 `v0.1.3-dirty`），会被出处闸门拦红：**今天实测 run `37328202572`（push 触发）两个 job 都
+   `failure`，`log-failed` 停在 `payload 出处（闸门）`**，所以它不会发出任何错产物，只是 Actions 页面上多一条红的。
+   `payload-*` 的 tag 不匹配这个模式，所以 payload 的 Release 不会触发构建。
+
+发布链条里"给玩家的那份"还多一步（`v0.1.3-compat` 当时漏了）：**OSS 目录里必须有 zip**。今天实测
+`.../0.1.3-compat/Stronghold-0.1.3-compat-android-debug.apk` 是 200，而同一目录的桌面 zip 是 **404** ——
+上传当时因为拥塞中断在 ~129 MB，所以帖子指向 Windows 那条链接一直是坏的。
+`scripts/oss-put-client.sh <目录> <版本号>` 要**两个文件都在**才会跑（缺就 exit 2），传完必须 HTTP 回读比 sha256。
 
 ## 服务器侧现状（2026-10-05 14:20 之后）
 

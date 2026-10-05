@@ -26,7 +26,7 @@ python scripts/spotcheck-release-entry.py v0.1.3-compat android 'assets/public/i
 条目路径写**子串**即可：桌面那份在 zip 里是 `build/desktop/win-unpacked/resources/www/index.html`（带 `build/` 前缀），
 APK 那份是 `assets/public/index.html`。
 
-## 3. 2026-10-05 16:09 实测（tag `v0.1.3-compat`，就是玩家现在下到的那两个文件）
+## 3. 2026-10-05 16:09 实测（tag `v0.1.3-compat`，**已被 `v0.1.3-c11` 取代**，见第 6 节）
 
 ```
 asset StrongholdProtocol-desktop-win-x64-0.1.3-compat.zip  353,439,776 B
@@ -75,3 +75,24 @@ MSYS 会把以 `/` 开头的 argv 当路径转换，`/webfonts/google/google.css
 这条**不是权威闸门**：它只看一个条目。权威判据仍然是整包下载后
 `node tools/check-payload-offline.mjs <exe>/resources/www` 与 `node tools/check-payload-offline.mjs --zip <apk>`
 （后者按 zip 条目扫全部文本文件，整包 grep 会漏 —— deflate 条目里搜不到字符串，见 `docs/09`）。
+
+## 6. 2026-10-05 23:0x 复测（tag `v0.1.3-c11`，**这才是玩家该下的那两个文件**）
+
+```
+桌面 StrongholdProtocol-desktop-win-x64-0.1.3-c11.zip  360,850,482 B
+  resources/www/index.html            2,739 -> 6,643 B   fonts.googleapis.com 0 · fonts.gstatic.com 0 · /webfonts/google/google.css 1
+  resources/www/js/shell/picker.js    9,384 -> 28,636 B   orderCandidates(toWsUrl(raw) 1 · no-cors 2 · Promise.all(candidates.map 1
+安卓 Stronghold-0.1.3-c11-android-debug.apk  232,320,951 B
+  assets/public/index.html            2,924 -> 6,643 B   0 · 0 · 1
+  assets/public/js/shell/picker.js   10,994 -> 28,636 B   1 · 2 · 1
+（APK 里还有个 `org/apache/cordova/allowlist/index.html`，2,109 B，是 Cordova 自带示例页，三条计数都 0 —— 别把它当入口页）
+```
+
+三点判读：
+- **入口页 6,684 → 6,643 B、外链 3 → 0**：字体镜像这条从"源头与闸门都就位、产物仍带外链"变成**已出厂**。
+  这条挂了两个 release（compat 与它之前），现在只剩**网页版**还带外链（生产 `public/index.html` 是热文件，见 §09 与 `docs/12`）。
+- 两个产物里的 `picker.js` 都是 28,636 B，等于客户端仓库 `main` 的 `shell/picker.js`，
+  三个判据计数一致 —— 选择页修复确实在**玩家下到的字节**里，不只在 CI 的临时产物里。
+- 上面这些数是 Range 三条 entry 读出来的（总传输约 1 MB）；同一晚也把两个产物**整包下载拆开**验过
+  （`picker.js` sha256 `f06a8a86…0e02cdb`、`picker-core.js` `e1bde54f…16ff88e`、GitHub `digest` == 本机 `sha256sum`），
+  两条路都要跑：Range 抽查便宜但只看一个条目，整包才配得上"发布完成"这句话。
