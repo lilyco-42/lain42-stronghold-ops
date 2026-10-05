@@ -51,6 +51,9 @@
 | 11 | 表情素材 + 清单 | `public/assets/local/**` + `data/local-assets.json` | 数据 | 交流面板从空框 → 6 套官方表情 |
 | 12 | **自愈 watchdog** | `sp-watchdog.{sh,service,timer}` | 服务 | FD 自动提升 / 熔断自动复位 |
 | 13 | **Spine 模型 gzip 化** | OSS 对象元数据 | 数据 | 模型传输 **86.3 → 20.0 MB（−77%）** |
+| 14 | 资源分离审计（只读） | `docs/08-resource-split-audit.md` | 结论 | 素材已全在 OSS；node 只剩 `/ws`+`index.html`+`/data`+`/sim` |
+| 15 | 客户端发布线 + 跨版本兼容 | `docs/09-client-release-line.md` | 结论 | exe/apk 装机玩家对服务器只剩 `ws`+`/healthz` |
+| 16 | 大厅注册开关改读 `site.json` | `config.py` + `wsgi.py`（`scripts/patch-lobby-skip-email-verify.py`） | **代码** | ⚠️ **未部署**：注册从「永远 400」→ 可注册（`docs/10`） |
 
 ## 端到端效果
 
@@ -88,6 +91,8 @@ scripts/
   build-oss-app.py           生成「指向 OSS 的前端副本」（含逃逸路径校验）
   patch-pingap-sim-cors.py   给 pingap 加 /sim CORS location（幂等 + 校验 + 回滚）
   patch-sp-data-compress.py  给 pingap 加 /data 压缩 location
+  patch-lobby-skip-email-verify.py   大厅注册开关改读 site.json（幂等，兼容 CRLF，支持 --dry-run）
+  test-patch-lobby-skip-email-verify.py  上面那个脚本的回归测试（28 项，不需要线上文件）
   fix-missing-spine.py       从上游仓库补 17 个缺失素材
   apply-oss-assets.mjs       把素材清单改写成 CDN 绝对 URL
   deploy.sh                  部署脚本（含步骤 2b：恢复 local 素材，防重部署丢失）
@@ -107,6 +112,11 @@ docs/
   05-missing-assets.md       补齐上游缺失素材（含上游来源映射表）
   06-delta-encoding.md       增量编码端到端验证（6/6 通过，再省 58% 带宽）
   07-spine-gzip.md           Spine 模型 gzip 化（已上线，模型传输 −77%）
+  08-resource-split-audit.md 资源分离审计：服务器现在只发 /ws + index.html + /data + /sim
+  09-client-release-line.md  客户端发布线：payload → Release → CI 闸门 → 产物核对 → 跨版本事实
+  10-lobby-register-400.md   大厅注册永远 400（代码已备好，线上未部署）
+
+AGENTS.md                   AI 协作契约：机器/仓库地图、红线、补丁脚本五条不变量、什么才算证据
 ```
 
 ## 部署顺序（重要）
@@ -143,6 +153,7 @@ docs/
 | FD 限额 | `cp /etc/systemd/system.conf.bak-<日期> /etc/systemd/system.conf && systemctl daemon-reexec` |
 | pingap 配置 | `cp /etc/pingap.toml.bak-sp-sim /etc/pingap.toml`（autoreload 自动加载） |
 | watchdog | `systemctl disable --now sp-watchdog.timer` |
+| 大厅注册开关（若已部署，见 `docs/10`） | `cp /opt/online-platform/{config,wsgi}.py.bak-skipverify /opt/online-platform/` 对应文件 && `systemctl restart online-platform.service`（只断大厅，不动对局） |
 
 ## ⚠️ 几条硬规矩（踩过的）
 
@@ -152,3 +163,6 @@ docs/
 4. **改 pingap 配置前先 `pingap -c /etc/pingap.toml -t`** —— 配置错会让 443 全挂。
 5. **`pgrep -f 'pingap -c ...'` 会匹配到自己的 bash** —— 用 `pgrep -x pingap`。
 6. **重启 stronghold = 丢掉所有进行中的对局** —— 状态只在内存里，没有落盘。
+7. **线上大厅的 `config.py` / `wsgi.py` 是全 CRLF 的**（实测 134/134、4985/4985 行带 CR）—— 本仓库 `*.patch` 被
+   `.gitattributes` 强制成 LF，CR 会被吃掉，`patch -p1` 只会 `Hunk FAILED (different line endings)`。
+   给这类文件打改动一律写 `scripts/patch-*.py`（按行匹配 + `--dry-run` + 保留各自换行符），见 `docs/10`。

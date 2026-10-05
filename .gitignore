@@ -6,3 +6,7 @@ ws-frames.json
 # 备份
 *.bak-*
 *.orig-*
+
+# python 测试跑出来的字节码
+__pycache__/
+*.pyc
