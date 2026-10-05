@@ -67,3 +67,23 @@ tar tzf pkg.tar.gz | sed 's|^\./||' | while read f; do ossutil cp "$f" "oss://..
 
 素材版权归**鹰角网络 / Yostar**，**不适用 GPL**，仅限个人非商业自用，**请勿再分发**。
 详见上游 [NOTICE.md](https://github.com/sganggs/Stronghold-Protocol/blob/master/NOTICE.md)。
+
+## 追加（2026-10-05 14:31 实测）：网页版与打包客户端的美术**集合不一样**
+
+把线上磁盘的文件清单和打包 payload 的清单对了一遍（同一 locale、去掉 CR 之后用 `comm`）：
+线上 `public/assets` **3995** 个文件，payload **4050** 个，差集正好 **55 个**，全是 0.1.3 新引用的那批：
+`ui/emoticon/**` 36 个 + `ui/guide/**` 19 个（`prod-only` 差集为 0，即线上没有 payload 里没有的东西）。
+
+逐个按清单里的地址探了一遍，结论是**分层的，不是一句"素材挂了"**：
+
+| 东西 | 网页版实际拿到的 | 怎么测的 |
+|---|---|---|
+| 表情 `ui/emoticon/**` | **正常** | 面板读的是 `data/local-assets.json`（相对路径），`/assets/local/emoticon/basic/pic_happy_battle.png` → **200** |
+| 攻略页 `ui/guide/**` | **看不到截图，退化成官方 tips 文字** | `assets.json` 把它列成 OSS 地址 → `HEAD` **404**；磁盘上也没有 → `/assets/ui/guide/autochess_shop_1.png` **404**；`public/js/ui/guide.js` 的注释与 `guideStage` 逻辑本来就写了"每个地址都失败就显示 `config.tips`" |
+| 角色/敌人立绘 | **正常** | 清单里的真实对象 `HEAD` 200（抽样 `site/char/avatar/char_1012_skadi2.png`），OSS 上 4506 条地址在位 |
+
+所以这 **不是 14:20 覆盖式升级造成的新故障**，是这批美术从来没被传到 OSS / 没进线上的 local 清单；
+打包客户端因为有 4050 个文件在设备上，攻略页是完整的。**给网页玩家补齐**要做两件事（都动 OSS/线上，需点头）：
+把 55 个文件按 `site/ui/...` 前缀传 OSS（`tools/apply-oss-assets.mjs` 那套流程），并给线上 `data/local-assets.json`
+加 `guide` 组（现在它只有 36 条 emoticon、0 条 guide）。补齐前不要报"攻略页坏了"——它是**设计内的文字降级**。
+
