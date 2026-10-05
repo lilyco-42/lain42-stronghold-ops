@@ -74,7 +74,12 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 > 钉住 `LONG_CACHE_DIRS` 里必须有 `webfonts`、css/woff2 的 mime、`index.html` **不得**继承长缓存（正控制，
 > 防止"全都长缓存"也能让前四条全绿），以及 `/webfonts/google/../../../../../../windows/win.ini` 必须非 200。
 > 本机整跑 **74/74**（2026-10-05 16:21 CST）。
-> ⚠️ 下表里**真 Chromium 看网络**那部分仍是手工测量（没有提交探针），换 payload 之后要照第三列重跑一遍。
+> **网页版那一侧也补上了**（游戏仓库 `test/webfonts-serve.test.js`，16:30）：直接对 `server/index.js` 的
+> `createStaticHandler` 起服务，钉住 `/webfonts/google/google.css` → 200 / `text/css` / `max-age=86400` / 455,869 B /
+> 含 `font-display: swap` / 无远程地址；切片 → 200 / `font/woff2` / magic `wOF2`（HEAD 也 200）；
+> 正控制是 `index.html` 与 `js/net.js` **不得**继承长缓存；三条点路径探测（含 `%2e` 编码那两种）实测一律 **403**，缺切片 404。
+> 变异复验同样做过：把 `webfonts` 从 `LONG_CACHE_DIRS` 删掉 → 4 项里 2 项红，第一条直接点名"表每次都重取是回归"。
+> ⚠️ 下表里剩下的**真 Chromium 看网络**那一列仍是手工测量（没有提交探针），换 payload 之后要照着第三列重跑一遍。
 
 | 宿主 | 这条怎么测 | 实测 |
 |---|---|---|
