@@ -38,7 +38,7 @@ curl -s -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 
 payload 里唯一剩下的外部请求是 `https://sp.lain42.top/healthz`（自己服务器的版本探测），这是设计行为，不是字体依赖。
 
-## 5. 闸门在 CI 里真的会咬（run #11，故意让它红）
+## 4. 闸门在 CI 里真的会咬（run #11，故意让它红）
 
 用**已发布的旧 payload** `payload-v0.1.3-c5`（`sp-payload-c5.tar.gz`，213,917,927 B，`expect_app=0.1.3`）跑了一次
 `build-clients.yml`：run `37270463759` 结论 **failure**，两个 job 都恰好死在 `零外部依赖（闸门）`，之后没有跑
@@ -54,14 +54,14 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 同一份检查在换成本机 `payload-c8` 时是绿的（727 个文本文件、112 woff2、0 问题）—— 红/绿两边都有实测，
 闸门不是摆设。**换 payload 之后要重跑一次**，红在这一步就说明产物里还没进镜像。
 
-## 6. 网页版还没受益（要随 0.1.3 升级一起走）
+## 5. 网页版还没受益（要随 0.1.3 升级一起走）
 
 `curl -s https://sp.lain42.top/index.html` 实测仍有 **2 次 `fonts.googleapis.com` + 1 次 `fonts.gstatic.com`**
 （外加自托管的 `/fonts/fonts.css`）—— 因为线上跑的是 `/opt/Stronghold-Protocol` 那份 **0.1.1** checkout，
 而镜像在 fork 分支上。线上 `public/index.html` 是热文件（此刻还有 246 人 / 177 场），
 **不能**用直接编辑它的方式铺字体；只能随 0.1.3 升级在低峰窗口整份换 checkout，一并带上字体镜像。
 
-## 7. 两个宿主各自怎么验的（换 payload 后照抄这张表）
+## 6. 两个宿主各自怎么验的（换 payload 后照抄这张表）
 
 | 宿主 | 这条怎么测 | 实测 |
 |---|---|---|
@@ -71,6 +71,22 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 | 升级后的 node 服务（本机 fork 分支实跑，不碰生产） | `PORT=5399 HOST=127.0.0.1 SP_NO_BROWSER=1 node server/index.js` 起一份，逐项 curl | `/healthz` 报 **`app:"0.1.3"`**；发出去的 `index.html` 里 **0 次外链、1 次 `/webfonts/google/google.css`**；`google.css` → 200 / `text/css` / **`public, max-age=86400`** / nosniff，带 `Accept-Encoding` 时 **gzip 455,869 → 129,626 B**；`.woff2` → 200 / `font/woff2`、**不**再 gzip（已压缩过，二次压缩是浪费 CPU）；`/data/assets.json` 200 / `no-cache`（回归没坏）、`/media/bgm/…` 200 / `audio/mpeg` 1,138,773 B（音频别名没坏）；`/webfonts/google/../../../etc/passwd` → **404**（多挂一个长缓存目录没开口子） |
 
 `android` 那条是**等价 lane 而非 APK 实测**——APK 要真机/模拟器才算摸过；这条区分在 `AGENTS.md` 的证据一节里也是硬要求。
+
+## 7. 产物级闸门：还要落在出厂字节上（两处按 grep 会骗人的地方）
+
+| 位置 | 实测 | 结论 |
+|---|---|---|
+| 桌面产物 | `app.asar` 只有 **29,619 B**（壳代码，`resolveMediaPath` 命中 2 次），游戏那份 www 在旁边的 `resources/www/` | 产物级闸门要指 `build/desktop/win-unpacked/resources/www`；只查 asar 根本看不到 HTML |
+| APK 产物 | `assets/public/**` 共 **4255** 条（zip 总 4693 条：stored 3213 / deflate 1480）；**整包 grep `fonts.googleapis.com` = 0 命中**，但解开 `assets/public/index.html` 后同一字符串出现 **2 次** | 必须按 zip 条目解开再查；对 APK 做整包 grep 会一路放行 |
+
+`tools/check-payload-offline.mjs` 因此支持三种目标（目录 / `--zip`），CI 两个 job 各多一步
+`零外部依赖（产物内，闸门）`，排在二进制生成之后、上传之前（客户端仓库 `5b46f03`，测试 63/63，
+把 inflate 那行改坏后有 4 项变红）。zip 解析器与 `python zipfile` 在真实 224 MB APK 上对齐：
+4693 / 4255 / method0 3213 / method8 1480 完全一致；跑**已发布的旧 APK** 报 3 条问题
+（`index.html`、`dev/uikit.html`、缺镜像表），跑旧桌面产物的 `resources/www` 同样 3 条。
+
+**安卓那半边目前是合成验证**：把 `payload-c8` 按 `assets/public/` 前缀打成 deflate zip 过闸是绿的，
+但**真正的 APK/EXE 还没用新 payload 重跑过** —— 要等新 payload 出门（见下面「还没做的一步」）。
 
 ## 8. 换机器复现这份 payload（不需要碰生产）
 
@@ -82,7 +98,7 @@ sha256 `de86c682da9cf32eb27dd95615e08e1cabefe3f889b811e2ec2f85e2a04ded80`），
 
 本机这条已经验过包含关系：`payload-c6 ⊃ www-c5`，**0 个文件丢失**、只多了 113 个（字体镜像 112 + `google.css`）。
 
-## 4. 还没做的一步（要人点头）
+## 9. 还没做的一步（要人点头）
 
 源头与产物闸门都已就位，但**已发布的 exe/apk 仍是旧 payload**。要出带镜像字体的新产物：
 
