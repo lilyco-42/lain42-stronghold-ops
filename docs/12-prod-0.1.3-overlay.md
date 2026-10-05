@@ -6,7 +6,7 @@
 
 - `stronghold.service` 在被反复重启：实测 **14:20:24 → 14:26:09 → 15:33:25 CST**（`NRestarts=0`、`Result=success` ——
   都是主动重启，不是崩溃），`/healthz` 的 `build` 标记也跟着换（`170cbe5e0753` → `634b49baa15c` → `e08209981ca9`）。
-  也就是说这台机器**此刻正被别人 aktif 迭代**：任何结论都要现场重取，别沿用几分钟前的读数。
+  也就是说这台机器**此刻正被别人反复重启/改文件**：任何结论都要现场重取，别沿用几分钟前的读数。
 - 看起来是 0.1.3：`package.json` 的 `"version": "0.1.3"`，`server/` 里 `room.spectate` / `removeSpectator`
   命中 13 处（`server/lobby.js:292` 有 `case 'room.spectate'`），14:25 / 14:26 两个 mtime 也对得上。
   ⚠️ **但这句话当时只成立了一半**：`shared/protocol.js` 还是 0.1.1 那份（`room.join` 在表里、`spectate` 命中 0），
