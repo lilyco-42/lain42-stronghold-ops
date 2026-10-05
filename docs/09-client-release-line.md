@@ -16,6 +16,18 @@
 
 ## 闸门与踩过的坑
 
+CI 现在一共**四道**闸门（两个 job 各两遍），顺序就是防御顺序：
+
+| # | 步骤名 | 查什么 | 红过一次吗 |
+|---|---|---|---|
+| 1 | `校验 payload 完整性` | 四个必需文件在不在、素材数 >3000 | — |
+| 2 | `校验 payload 版本（闸门）` | `build.json.game.app` 对 `expect_app`（或本仓库 `version`）+ `server` 输入 | run #4 就是死在这（payload 停在 0.1.1） |
+| 3 | `零外部依赖（闸门）` | **暂存 payload**：外部字体主机 / CDN 绝对地址 / 字体镜像完整性 | run `37270463759`（故意用旧 payload 跑的）两个 job 都红在这一步 |
+| 4 | `零外部依赖（产物内，闸门）` | **出厂字节**：桌面扫 `resources/www`，APK 用 `--zip` 按条目扫 | 本地对已发布的旧 exe/APK 跑是红的；新产物还没经 CI 出过 |
+
+第 4 道为什么要存在（两条实测）：桌面 `app.asar` 只有 29,619 B（游戏 www 在它旁边），
+而 APK 的 `assets/public/**` 是 deflate 条目 —— **整包 grep 字体主机 0 命中，解开条目才有 2 次**。
+
 - `build-clients.yml` 里"校验 payload 完整性"只 `cat build.json`、**从不比对版本**，所以仓库标 0.1.2 时产物静默
   发布了 0.1.1（run #2/#3 都是）。现在加了 `expect_app` 闸门：留空则要求 payload `game.app` == 本仓库 `version`，
   顺带校验 `build.json.server` == `server` 输入。实测 run #4 精确死在这一步、run #9 显式放行后成功。
@@ -34,10 +46,15 @@
 
 ## 服务器侧现状（2026-10-05 14:20 之后）
 
-线上已经在 **0.1.3**（`/healthz` 的 `app`，`stronghold` 于 14:20:24 CST 重启），所以 0.1.3 客户端的观战/踢人
-不再被版本闸门挡住 —— 这是设计内行为。但**这次升级是覆盖式的**：`git log` 还停在 `8b10625`、238 个 `M`、没留备份，
-并且 `public/index.html` 回退成上游那份（`dl.lain42.top` 命中 0、Google 字体外链回来了）。
-素材清单没受影响（4506 条 OSS）。细节与补救见 **`docs/12-prod-0.1.3-overlay.md`**。
+线上 `/healthz.app` 已经是 **0.1.3**（`stronghold` 14:20:24、14:26:09 CST 两次重启），
+但**别把版本号当能力**（这句是 15:09 实测改的，先前我写成"所以观战/踢人会自动解禁"，那是错的）：
+线级探测 `room.spectate` / `room.kick` / `room.removeSpectator` 三个全部回 `BAD_MSG unknown type`，
+`room.join` 回业务级 `ROOM_NOT_FOUND` —— 那次部署是覆盖式的混合体：`server/` 上了 0.1.3，
+`shared/protocol.js` 还是 0.1.1，而 `server/net.js:587` 判类型只看后者那张表。
+客户端因此会点亮入口 → 玩家点一次报错 → 才被动学会灰掉。复现与机制在 **`docs/12-prod-0.1.3-overlay.md` §5**，
+换基线后的整套核对在 **`docs/13-upgrade-drift-checklist.md`**。
+同一次部署还把 `public/index.html` 换回上游那份（`dl.lain42.top` 命中 0、Google 字体外链回来了）；
+素材清单没受影响（4506 条 OSS）。
 
 下一轮服务器侧要做的（都需要窗口/点头）：在新 0.1.3 上重做"前端指向 OSS"（`scripts/build-oss-app.py` + 并行
 `index-oss.html` 验证，`public/index.html` 是热文件）、把字体镜像带上（fork 分支 `86719d1`）、把部署收成可切的
