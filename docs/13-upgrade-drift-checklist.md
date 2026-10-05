@@ -77,7 +77,18 @@ tar 内含那 2 条 corrosion BGM，离线闸门 0 问题。c8（4366 文件，`
 合并后仍 `APPLIES`（`index.html` 2 / `net.js` 3 / `room.js` 2）。**它的 hunk 数、文件数、
 `docs/PACKAGING.md` 里那句数字三处必须一起改**，否则下次没人知道谁过期了。
 
-## 6. 服务器侧收尾（都要人点头）
+## 6. 版本信号别只信 `/healthz.app`：拿线级能力对一遍
+
+```
+node scripts/probe-server-capability.mjs wss://<host>/ws   room.spectate room.kick room.removeSpectator room.join room.notARealVerb
+```
+
+判读只看 `verdict`：`unknown` = 类型表里没有（这台机器没这能力），`handled` = 认得（回的是业务级错误）。
+今天线上实测：三个 0.1.3 动词全 `unknown`，`room.join` 是 `handled`，自造那个 `unknown`（正控制过）——
+而 `/healthz.app` 却报 `0.1.3`。原因是 `shared/` 与 `server/` 版本不一致（详见 `docs/12` §5）。
+**探测器的 name 要用短名字**（`'CapabilityProbe'` 会收不到 welcome，全是超时）。
+
+## 7. 服务器侧收尾（都要人点头）
 
 - 部署要走**可切 commit**，别再用覆盖式（今天 238 个 `M` 没备份，回滚只能反着打 `git diff`）。
 - `data/assets.json` 在线上是 CDN 改写版，**不能进 payload**（进了就绑死 OSS、离线白屏）。

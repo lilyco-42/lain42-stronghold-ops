@@ -5,8 +5,11 @@
 ## 1. 发生了什么
 
 - `stronghold.service` **14:20:24 CST** 重启（`MainPID=3879232`、`NRestarts=0`、`Result=success` —— 主动重启，不是崩溃）。
-- 活的代码确实是 **0.1.3**，两条独立证据：`package.json` 的 `"version": "0.1.3"`；
-  `server/` + `shared/` 里 `room.spectate` / `removeSpectator` **命中 13 处**（这两个动词 0.1.1 根本没有）。
+- 看起来是 0.1.3：`package.json` 的 `"version": "0.1.3"`，`server/` 里 `room.spectate` / `removeSpectator`
+  命中 13 处（`server/lobby.js:292` 有 `case 'room.spectate'`），14:25 / 14:26 两个 mtime 也对得上。
+  ⚠️ **但这句话当时只成立了一半**：`shared/protocol.js` 还是 0.1.1 那份（`room.join` 在表里、`spectate` 命中 0），
+  于是线上是 `server/` = 0.1.3 + `shared/` = 0.1.1 的混合体，**线级行为仍然没有 0.1.3 的能力**。
+  我一开始据此写"三个入口会自动解禁"，是错的 —— 完整测量与机制在 §5。
 - 但 `/opt/Stronghold-Protocol` 的 `git log -1` 仍是 **`8b10625`（0.1.1）**，`git describe` = `8b10625-dirty`，
   `git status --porcelain` 有 **238 个 `M`**。也就是说这是**把新文件覆盖到旧 checkout 上**，不是切 tag/commit。
   直接后果：`git diff` 成了唯一的回滚线索，没有可切的旧 commit，仓库里也没有留 `*.bak*`。
@@ -100,10 +103,39 @@ print(\"oss urls\", len(u)); print(\"sample\", u[0])
 3. 让部署**可切 commit**：把当前工作树收成一个 commit（或至少留 `index.html` / `assets.json` 的 `.bak-<日期>`）。
    现在 238 个 `M` 没备份，回滚只能靠反向 `git diff`。
 4. 开 pingap 按路径访问日志，否则"谁在吃带宽"永远只能推。
-5. 好消息已经**实测确认**（不是推断）：把新 payload 用纯静态服务起在 `127.0.0.1:47901`，在真 Chromium 里
-   按应用自己的方式 `new Net({})` 再 `_probeServerInfo()`，结果：
-   `serverKey = wss://sp.lain42.top/ws`、`healthUrl = https://sp.lain42.top/healthz`（跨源能读，靠 `sp_healthz_cors`）、
-   **`serverApp = "0.1.3"`**，于是 `verbAvailable()` 对 `room.spectate` / `room.kick` / `room.removeSpectator`
-   三个全部回到 `{ok:true, reason:null}`（线上还是 0.1.1 时它们是 `older-server` 灰掉），
-   `serverLacks(...,'room.spectate') = false`。同一次读数里 `humans` 已从重启后的 13 回到 36、`matches` 23。
-   这就是"客户端自动识别服务端版本并应用"设计内的行为，**不需要改客户端**。
+5. ~~线上现在是 0.1.3，观战/踢人入口会自动解禁~~ —— **这条我先写错过，已被实测推翻，见 §5。**
+
+## 5. `/healthz.app` 会骗人：线上是"混合版本"（15:09 实测）
+
+客户端侧一切正常，但结论是**错的**那一半在这里纠正。两次独立测量：
+
+- 版本探测：新 payload 用纯静态服务起在 `127.0.0.1:47901`，真 Chromium 里按应用自己的方式 `new Net({})` +
+  `_probeServerInfo()` → `serverApp = "0.1.3"`、`verbAvailable()` 对三个 0.1.3 动词全部 `{ok:true}`（版本号驱动，符合设计）。
+- 线级探测：`node scripts/probe-server-capability.mjs wss://sp.lain42.top/ws room.spectate room.kick room.removeSpectator room.join room.notARealVerb` →
+
+  ```
+    unknown  room.spectate          BAD_MSG: unknown type room.spectate
+    unknown  room.kick              BAD_MSG: unknown type room.kick
+    unknown  room.removeSpectator   BAD_MSG: unknown type room.removeSpectator
+    handled  room.join              ROOM_NOT_FOUND:
+    unknown  room.notARealVerb      BAD_MSG: unknown type room.notARealVerb   ← 正控制
+  ```
+
+  同一台机器上 `room.join` 回的是业务级 `ROOM_NOT_FOUND`（说明它认得这个类型），三个新动词回的是协议级
+  `unknown type` —— 所以**这台服务器没有这三个能力**，尽管 `/healthz` 说自己是 0.1.3。
+
+机制（读了两边的代码才敢写）：`server/net.js:587` 只认 `shared/protocol.js` 里 `C2S` 表的类型，不在表里就在
+`net.js:589` 直接 `BAD_MSG unknown type …`，**根本走不到** `server/lobby.js` 的 `case`。
+0.1.3 的 `shared/protocol.js:259` 有 `'room.spectate': {…}`；而线上的 `shared/protocol.js`（14:26 改过）
+`room.join` 命中 1、`spectate` 命中 **0**，同目录的 `server/lobby.js`（14:25、48 KB）却已经是 0.1.3 那份。
+也就是说 14:20 / 14:26 那两次部署是**混合文件**：`server/` 上了 0.1.3，`shared/` 还是 0.1.1。
+
+对用户看到的行为：客户端点亮观战/踢人 → 点下去报一次错 → 客户端从这条 `BAD_MSG` 学到"这台服务器没有"，
+之后才灰掉（`serverLacks` 的被动学习）。**能自纠，但要多点一次**，所以：
+- 服务器侧要把 `shared/` 一起升到 0.1.3（`git checkout -- shared/` 之类，动的是热文件，需点头），或整份换 commit；
+- 客户端侧的可选加固：连上之后用这种 bogus-code 探测主动学一次（代价是服务器日志里多几条 BAD_MSG），
+  我没擅自加，因为它不是明确需求，而且现有被动学习已经能自纠 —— 但这是今天量出来的真实缺口，值得记着。
+
+顺带记一条踩坑方法学：`name` 传 `'CapabilityProbe'` 时服务器**不回 welcome**，探测会永远超时；换成 `'Probe'` 就正常。
+我第一次误判成"BAD_MSG 不回传 rid"，实际 rid 是回传的（`{"t":"error","code":"BAD_MSG","rid":2,…}`）——
+是末尾那个自造动词的正控制没通过，才逼我去看真实事件流。**探测器必须自带正控制**，否则报的是探测器的 bug。
