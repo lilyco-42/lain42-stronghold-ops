@@ -57,9 +57,10 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 ## 5. 网页版还没受益（要随 0.1.3 升级一起走）
 
 `curl -s https://sp.lain42.top/index.html` 实测仍有 **2 次 `fonts.googleapis.com` + 1 次 `fonts.gstatic.com`**
-（外加自托管的 `/fonts/fonts.css`）—— 因为线上跑的是 `/opt/Stronghold-Protocol` 那份 **0.1.1** checkout，
-而镜像在 fork 分支上。线上 `public/index.html` 是热文件（此刻还有 246 人 / 177 场），
-**不能**用直接编辑它的方式铺字体；只能随 0.1.3 升级在低峰窗口整份换 checkout，一并带上字体镜像。
+（外加自托管的 `/fonts/fonts.css`）—— 因为线上那份 `index.html` 是**上游 0.1.3 的文件**：2026-10-05 14:20:24 CST
+有一次覆盖式升级把 `public/index.html` 换回了上游版（连同 `dl.lain42.top` 的前端改写一起没了，见 `docs/12`）。
+镜像在 fork 分支 `86719d1` 上，不在这份文件里。`public/index.html` 是热文件（重启前 244 人 / 174 场，14:21 实测 13 人 / 6 场），
+**不能**用直接编辑它的方式铺字体；按 `docs/12` 第 4 节那条零风险路径走（生成 OSS 版 → 并行页验证 → 再覆盖）。
 
 ## 6. 两个宿主各自怎么验的（换 payload 后照抄这张表）
 
@@ -67,7 +68,7 @@ payload 离线闸门：扫描 726 个文本文件，woff2 镜像 0 个，字体�
 |---|---|---|
 | 打包桌面（Electron 自带文件服务器） | 用 `desktop/serve.mjs` 的 `createStaticServer({ root: payload })` 起真实壳，再请求镜像 | `/webfonts/google/google.css` → **200 / `text/css` / `public, max-age=86400`**，421 个 `@font-face`、远程主机引用 **0**；`.woff2` → **200 / `font/woff2`**、magic `wOF2`；`index.html` → `no-cache`；不存在的音轨 → 404（没有把 404 伪装成 200） |
 | 打包安卓（Capacitor 纯静态 `www/`） | Capacitor 就是把 `www/` 按根目录静态发出去，所以用**没有别名的纯静态服务**当等价lane（当初 `/media` 那个坑也是这么抓出来的），在真 Chromium 里看网络 | 对 `fonts.googleapis` / `fonts.gstatic` **0 请求**；21 个字体请求全部来自 `127.0.0.1`；`document.fonts` 424 face 已加载；Rajdhani 与回退字体度量不同（649.09 vs 755.98 px），说明镜像确实在用而不是回退 |
-| 网页版 | `curl -s https://sp.lain42.top/index.html \| grep -c fonts.googleapis.com` | **仍是 2 次外链**（0.1.1 热文件，未动） |
+| 网页版（生产） | `curl -s https://sp.lain42.top/index.html` 数外链 | **2 次 `fonts.googleapis.com` + 1 次 `fonts.gstatic.com`**（14:20 覆盖式升级换上的是上游 `index.html`，见 `docs/12`） |
 | 升级后的 node 服务（本机 fork 分支实跑，不碰生产） | `PORT=5399 HOST=127.0.0.1 SP_NO_BROWSER=1 node server/index.js` 起一份，逐项 curl | `/healthz` 报 **`app:"0.1.3"`**；发出去的 `index.html` 里 **0 次外链、1 次 `/webfonts/google/google.css`**；`google.css` → 200 / `text/css` / **`public, max-age=86400`** / nosniff，带 `Accept-Encoding` 时 **gzip 455,869 → 129,626 B**；`.woff2` → 200 / `font/woff2`、**不**再 gzip（已压缩过，二次压缩是浪费 CPU）；`/data/assets.json` 200 / `no-cache`（回归没坏）、`/media/bgm/…` 200 / `audio/mpeg` 1,138,773 B（音频别名没坏）；`/webfonts/google/../../../etc/passwd` → **404**（多挂一个长缓存目录没开口子） |
 
 `android` 那条是**等价 lane 而非 APK 实测**——APK 要真机/模拟器才算摸过；这条区分在 `AGENTS.md` 的证据一节里也是硬要求。

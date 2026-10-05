@@ -53,11 +53,14 @@ lain42.top《卫戍协议：盟约》的**运维改动集**：事故复盘、已
 
 ## 5. 当前状态（2026-10-05）
 
-- 线上游戏 **0.1.1 @ 8b10625**，`stronghold.service` 自 2026-10-04 20:03:41 CST 未重启；上游已到 0.1.3。
+- 线上游戏**已是 0.1.3**：2026-10-05 14:20:24 CST 有一次**覆盖式**部署（`/healthz.app=0.1.3`、`room.spectate`
+  命中 13 处，可 `git log` 仍停在 `8b10625`、238 个 `M`、没留备份）。那次部署把 `public/index.html` 换回上游版，
+  OSS 前端改写与字体镜像一起没了；素材清单没受影响（4506 条 OSS）。全在 `docs/12-prod-0.1.3-overlay.md`。
   `PROTOCOL_VERSION` 三个版本都是 1 → 升不升级**不能**靠 socket 协商。
 - 客户端已发布跨版本兼容产物（见客户端仓库 Release `v0.1.3-compat` 与 `docs/09-client-release-line.md`）。
 - 大厅注册 400 的修复**代码已备好、回归测试全绿、线上未部署**：`docs/10-lobby-register-400.md`。
-- 大厅 `wsgi.py` 在 2026-10-05 13:48 被另一处改动重写过（变全 LF、194,356 B），`config.py` 未变；
-  `scripts/patch-lobby-skip-email-verify.py --dry-run` 在新字节上重跑仍然 rc=0（见 `docs/10` 末节）。
+- 大厅 `wsgi.py` 一天里被外部改过两次（13:48 变全 LF、14:10 再变，md5 `24c6a6eb…`→`43c3b939…`→`3918ab4b…`），
+  `config.py` 未变（`b2c9493a…`）；`patch-lobby-skip-email-verify.py --dry-run` 在最新字节上重跑仍 rc=0（见 `docs/10` 末节）。
+  **推论**：动大厅前必须重新 `--dry-run` + `md5sum`，不能沿用早上的结论。
 - `docs/08-resource-split-audit.md` 结论：素材层已彻底分离（清单 4451 条指向 OSS，同源只剩 8 条），
   node 只剩 `/ws` + `index.html` + `/data` + `/sim`。

@@ -32,8 +32,13 @@
 - 唯一可用版本信号是 `GET /healthz` 的 `app`（我们这台靠 pingap 的 `sp_healthz_cors` 才可跨源读；自建服没开 CORS 时
   读不到 → 客户端必须乐观放行，不能锁功能）。实测矩阵与已发布产物见客户端仓库 Release `v0.1.3-compat`。
 
-## 待办（服务器侧，需要窗口）
+## 服务器侧现状（2026-10-05 14:20 之后）
 
-线上仍是 **0.1.1**（`/healthz` 的 `app`，`ExecMainStartTimestamp` 2026-10-04 20:03:41 未重启）。
-升到 0.1.3 会杀掉所有进行中对局；升完之后 0.1.3 客户端的观战/踢人才会解禁。
-升级前先看 `/healthz` 的 `humans`/`matches` 选低峰，并保留 `deploy.sh` 的自动回滚路径。
+线上已经在 **0.1.3**（`/healthz` 的 `app`，`stronghold` 于 14:20:24 CST 重启），所以 0.1.3 客户端的观战/踢人
+不再被版本闸门挡住 —— 这是设计内行为。但**这次升级是覆盖式的**：`git log` 还停在 `8b10625`、238 个 `M`、没留备份，
+并且 `public/index.html` 回退成上游那份（`dl.lain42.top` 命中 0、Google 字体外链回来了）。
+素材清单没受影响（4506 条 OSS）。细节与补救见 **`docs/12-prod-0.1.3-overlay.md`**。
+
+下一轮服务器侧要做的（都需要窗口/点头）：在新 0.1.3 上重做"前端指向 OSS"（`scripts/build-oss-app.py` + 并行
+`index-oss.html` 验证，`public/index.html` 是热文件）、把字体镜像带上（fork 分支 `86719d1`）、把部署收成可切的
+commit，以及开 pingap 的按路径访问日志（`docs/08` 的测量缺口）。
