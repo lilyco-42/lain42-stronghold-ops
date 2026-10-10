@@ -63,7 +63,7 @@ test('HTTP auth, paging, singular lookup, headers, missing lobby, methods and ra
     assert.equal(body.schemaVersion, 1);
     assert.equal(body.rooms.length, 1);
     assert.equal(body.rooms[0].code, 'ABCD');
-    const item = await request('/v1/rooms/ABCD', { headers: auth });
+    const item = await request('/api/bot/v1/rooms/ABCD', { headers: auth });
     assert.equal((await item.json()).room.code, 'ABCD');
     assert.equal((await request('/v1/rooms/EFGH', { headers: auth })).status, 404);
     assert.equal((await request('/v1/rooms?mode=invalid', { headers: auth })).status, 400);
