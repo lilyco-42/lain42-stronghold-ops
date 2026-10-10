@@ -1,0 +1,46 @@
+name: Stronghold room observer compatibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'extensions/sp-room-api/**'
+      - '.github/workflows/sp-room-api.yml'
+  schedule:
+    - cron: '22 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  room-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout observer
+        uses: actions/checkout@v4
+
+      - name: Checkout verified game version
+        uses: actions/checkout@v4
+        with:
+          repository: lilyco-42/Stronghold-Protocol
+          ref: deploy/verified
+          path: game
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: game/package-lock.json
+
+      - name: Install game dependencies
+        working-directory: game
+        run: npm ci --no-audit --no-fund
+
+      - name: Contract and auth checks
+        run: node --test extensions/sp-room-api/room-api.test.mjs
+
+      - name: Live in-process Lobby smoke (throwaway process)
+        run: node extensions/sp-room-api/integration-smoke.mjs "$GITHUB_WORKSPACE/game"
