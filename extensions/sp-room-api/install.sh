@@ -26,9 +26,12 @@ fi
 [ -f "$GAME_ROOT/server/lobby.js" ] && [ -f "$GAME_ROOT/server/index.js" ] ||
   { echo "Game root not found" >&2; exit 1; }
 command -v node >/dev/null || { echo "Node not in PATH; check service runtime" >&2; exit 1; }
+systemctl show stronghold.service -p ExecStart --value | grep -Fq "/opt/Stronghold-Protocol/server/index.js" || {
+  echo "Only direct-node Stronghold service entry is supported; refusing NODE_OPTIONS injection" >&2; exit 1;
+}
 node --check "$HERE/preload.mjs"
 node --test "$HERE/room-api.test.mjs"
-if systemctl show stronghold.service -p Environment --value | grep -q 'NODE_OPTIONS='; then
+if systemctl show stronghold.service -p Environment --value | grep -q 'NODE_OPTIONS=' && ! grep -Fq 'SP_ROOM_API_TOKEN_FILE' "$UNIT" 2>/dev/null; then
   echo "Existing NODE_OPTIONS detected; do not overwrite its configuration automatically" >&2
   exit 1
 fi
@@ -41,6 +44,7 @@ install -d -m 755 "$DEST"
 for f in preload.mjs api.mjs snapshot.mjs room-api.test.mjs; do
   install -m 644 "$HERE/$f" "$DEST/$f"
 done
+install -m 755 "$HERE/install.sh" "$DEST/install.sh"
 install -d -m 755 "$(dirname "$UNIT")"
 if [ -f "$UNIT" ] && ! grep -Fq 'SP_ROOM_API_TOKEN_FILE' "$UNIT"; then
   echo "Refusing to replace unrelated stronghold unit override" >&2
