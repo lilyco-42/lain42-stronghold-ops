@@ -54,7 +54,9 @@ export function createRoomApiHandler({ getLobby, token, maxRequestsPerMinute = 1
     let url;
     try { url = new URL(req.url, 'http://localhost'); }
     catch { return reply(req, res, 400, { ok: false, error: { code: 'BAD_QUERY' } }); }
-    if (url.pathname !== '/v1/rooms' && !/^\/v1\/rooms\/[A-HJ-NP-Z]{4}$/.test(url.pathname)) {
+    // Public reverse proxy can preserve /api/bot prefix; loopback callers use /v1.
+    const route = url.pathname.startsWith('/api/bot/') ? url.pathname.slice('/api/bot'.length) : url.pathname;
+    if (route !== '/v1/rooms' && !/^\/v1\/rooms\/[A-HJ-NP-Z]{4}$/.test(route)) {
       return reply(req, res, 404, { ok: false, error: { code: 'NOT_FOUND' } });
     }
     const mode = url.searchParams.get('mode') ?? 'coop';
@@ -72,8 +74,8 @@ export function createRoomApiHandler({ getLobby, token, maxRequestsPerMinute = 1
     try { rooms = roomsSnapshot(getLobby(), { mode, joinableOnly: joinable === '1' }); }
     catch { return reply(req, res, 503, { ok: false, error: { code: 'LOBBY_UNAVAILABLE' } }); }
     const timestamp = new Date(now()).toISOString();
-    const code = url.pathname.slice('/v1/rooms/'.length);
-    if (url.pathname !== '/v1/rooms') {
+    const code = route.slice('/v1/rooms/'.length);
+    if (route !== '/v1/rooms') {
       const found = rooms.find(r => r.code === code);
       return reply(req, res, found ? 200 : 404, found
         ? { ok: true, schemaVersion: API_VERSION, generatedAt: timestamp, room: found }
