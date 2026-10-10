@@ -39,6 +39,9 @@ jobs:
         working-directory: game
         run: npm ci --no-audit --no-fund
 
+      - name: Pingap URL rewrite and patch idempotency
+        run: python3 extensions/sp-room-api/test_patch_pingap.py
+
       - name: Contract and auth checks
         run: node --test extensions/sp-room-api/room-api.test.mjs
 

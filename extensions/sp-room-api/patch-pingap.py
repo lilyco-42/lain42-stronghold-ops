@@ -17,6 +17,7 @@ UPSTREAM = "sp_room_bot_backend"
 LOCATION = "sp_room_bot"
 SERVER = "https"
 ROUTE = "/api/bot/v1/"
+REWRITE = "^/api/bot/v1/(.*)$ /v1/$1"
 
 
 def patch(src: str) -> str:
@@ -27,7 +28,7 @@ def patch(src: str) -> str:
     if LOCATION in server["locations"]:
         existing = parsed.get("locations", {}).get(LOCATION, {})
         upstream = parsed.get("upstreams", {}).get(UPSTREAM, {})
-        if existing.get("path") != ROUTE or existing.get("upstream") != UPSTREAM or upstream.get("addrs") != ["127.0.0.1:5187"]:
+        if existing.get("path") != ROUTE or existing.get("upstream") != UPSTREAM or existing.get("rewrite") != REWRITE or upstream.get("addrs") != ["127.0.0.1:5187"]:
             raise ValueError("conflicting existing room route")
         return src
     if LOCATION in parsed.get("locations", {}) or UPSTREAM in parsed.get("upstreams", {}):
@@ -55,12 +56,14 @@ def patch(src: str) -> str:
         "\n[locations.sp_room_bot]\n"
         'host = "sp.lain42.top"\n'
         'path = "/api/bot/v1/"\n'
+        'rewrite = "^/api/bot/v1/(.*)$ /v1/$1"\n'
         'upstream = "sp_room_bot_backend"\n'
         "enable_reverse_proxy_headers = true\n"
     )
     checked = tomllib.loads(out)
     assert checked["servers"][SERVER]["locations"].index(LOCATION) < checked["servers"][SERVER]["locations"].index("sp")
     assert checked["locations"][LOCATION]["upstream"] == UPSTREAM
+    assert checked["locations"][LOCATION]["rewrite"] == REWRITE
     return out
 
 
@@ -97,7 +100,7 @@ def main() -> None:
         os.chmod(candidate, path.stat().st_mode & 0o777)
         os.replace(candidate, path)
         print("APPLIED; backup:", str(backup))
-        print("No Pingap reload performed; validate the backend first.")
+        print("Not explicitly reloading Pingap; --autoreload services can reload this configuration automatically.")
     finally:
         if os.path.exists(candidate):
             os.unlink(candidate)
