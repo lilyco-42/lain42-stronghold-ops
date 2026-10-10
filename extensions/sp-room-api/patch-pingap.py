@@ -82,16 +82,18 @@ def main() -> None:
     if after == before:
         print("ALREADY_APPLIED")
         return
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", prefix="sp-room-", delete=False, encoding="utf-8") as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", prefix=".sp-room-", dir=str(path.parent), delete=False, encoding="utf-8") as f:
         f.write(after)
         candidate = f.name
     try:
         subprocess.run(["pingap", "-c", candidate, "-t"], check=True)
         backup = path.with_name(path.name + ".sp-room-backup")
         if backup.exists():
-            raise FileExistsError("backup already exists, refusing to overwrite")
-        backup.write_text(before, encoding="utf-8")
-        os.chmod(backup, 0o600)
+            if backup.read_text(encoding="utf-8") != before:
+                raise FileExistsError("backup exists with different contents; refusing to overwrite")
+        else:
+            backup.write_text(before, encoding="utf-8")
+            os.chmod(backup, 0o600)
         os.chmod(candidate, path.stat().st_mode & 0o777)
         os.replace(candidate, path)
         print("APPLIED; backup:", str(backup))
