@@ -1,0 +1,175 @@
+openapi: 3.1.0
+info:
+  title: Stronghold Protocol Room Observer API
+  version: 1.0.0
+  description: >-
+    Independent read-only adapter to Stronghold's in-memory Lobby state.
+    Not an upstream native endpoint; all data requires a bearer token.
+servers:
+  - url: https://sp.lain42.top
+security:
+  - botBearer: []
+paths:
+  /api/bot/v1/rooms:
+    get:
+      operationId: listWaitingRooms
+      summary: List waiting game rooms
+      description: >-
+        Default mode is coop. No active matches, private match drafts,
+        player IDs, network addresses or reconnect credentials are returned.
+      parameters:
+        - name: mode
+          in: query
+          schema:
+            type: string
+            enum: [coop, solo, all]
+            default: coop
+        - name: joinable
+          in: query
+          schema:
+            type: string
+            enum: ['0', '1']
+            default: '0'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 10000
+            default: 0
+      responses:
+        '200':
+          description: Live waiting room snapshot
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: no-store, max-age=0
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomList'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /api/bot/v1/rooms/{code}:
+    get:
+      operationId: getWaitingRoom
+      summary: Get one waiting room by four-letter code
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-HJ-NP-Z]{4}$'
+        - in: query
+          name: mode
+          schema:
+            type: string
+            enum: [coop, solo, all]
+            default: coop
+      responses:
+        '200':
+          description: Waiting room detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, schemaVersion, generatedAt, room]
+                properties:
+                  ok: { type: boolean, const: true }
+                  schemaVersion: { type: integer, const: 1 }
+                  generatedAt: { type: string, format: date-time }
+                  room: { $ref: '#/components/schemas/Room' }
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    botBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-base64url
+  responses:
+    Error:
+      description: Request rejected or room observer unavailable
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ok, error]
+            properties:
+              ok: { type: boolean, const: false }
+              error:
+                type: object
+                required: [code]
+                properties:
+                  code:
+                    type: string
+                    enum: [BAD_QUERY, UNAUTHORIZED, RATE_LIMITED, METHOD_NOT_ALLOWED, NOT_FOUND, ROOM_NOT_FOUND, LOBBY_UNAVAILABLE]
+  schemas:
+    RoomList:
+      type: object
+      required: [ok, schemaVersion, generatedAt, total, offset, limit, rooms]
+      properties:
+        ok: { type: boolean, const: true }
+        schemaVersion: { type: integer, const: 1 }
+        generatedAt: { type: string, format: date-time }
+        total: { type: integer, minimum: 0 }
+        offset: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        rooms:
+          type: array
+          items: { $ref: '#/components/schemas/Room' }
+    Player:
+      type: object
+      required: [seat, name, isBot, ready, connected, isHost]
+      properties:
+        seat: { type: integer, minimum: 0, maximum: 3 }
+        name: { type: string, maxLength: 32 }
+        isBot: { type: boolean }
+        ready: { type: boolean }
+        connected: { type: boolean }
+        isHost: { type: boolean }
+    Room:
+      type: object
+      required: [code, mode, difficulty, status, capacity, occupancy, humans, bots, joinable, players, strategy, createdAt]
+      properties:
+        code: { type: string, pattern: '^[A-HJ-NP-Z]{4}$' }
+        mode: { type: string, enum: [solo, coop] }
+        difficulty: { type: string, enum: [FUNNY, NORMAL, HARD, ABYSS] }
+        status: { type: string, const: waiting }
+        capacity: { type: integer, minimum: 1, maximum: 4 }
+        occupancy: { type: integer, minimum: 0, maximum: 4 }
+        humans: { type: integer, minimum: 0, maximum: 4 }
+        bots: { type: integer, minimum: 0, maximum: 4 }
+        joinable: { type: boolean }
+        players:
+          type: array
+          maxItems: 4
+          items: { $ref: '#/components/schemas/Player' }
+        strategy:
+          type: object
+          required: [aiPicksLast]
+          properties:
+            aiPicksLast: { type: boolean }
+        createdAt:
+          anyOf:
+            - { type: string, format: date-time }
+            - { type: 'null' }
