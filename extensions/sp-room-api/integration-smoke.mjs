@@ -6,6 +6,7 @@ import { createServer } from 'node:net';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const root = resolve(process.argv[2] || '.');
@@ -28,7 +29,7 @@ if (!created.ok) throw Error('Unable to create isolated test room');
 console.log('SMOKE_READY');
 process.stdin.resume();
 `;
-const child = spawn(process.execPath, ['--import', resolve('extensions/sp-room-api/preload.mjs'), '--input-type=module', '-e', childJS], {
+const child = spawn(process.execPath, ['--import', pathToFileURL(resolve('extensions/sp-room-api/preload.mjs')).href, '--input-type=module', '-e', childJS], {
   cwd: root, stdio: ['pipe', 'pipe', 'pipe'], env: {
     ...process.env, SP_ROOM_GAME_ROOT: root, SP_ROOM_API_PORT: String(port),
     SP_ROOM_API_TOKEN_FILE: file,
