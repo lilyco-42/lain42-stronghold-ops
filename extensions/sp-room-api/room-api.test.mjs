@@ -47,7 +47,7 @@ test('resilient to incompatible room objects', () => {
 });
 
 test('HTTP auth, paging, singular lookup, headers, missing lobby, methods and rate limit', async () => {
-  const srv = createServer(createRoomApiHandler({ getLobby: lobby, token: TOKEN, maxRequestsPerMinute: 7 }));
+  const srv = createServer(createRoomApiHandler({ getLobby: lobby, token: TOKEN, maxRequestsPerMinute: 5 }));
   await new Promise(resolve => srv.listen(0, '127.0.0.1', resolve));
   const root = 'http://127.0.0.1:' + srv.address().port;
   const request = (path, opts = {}) => fetch(root + path, opts);
