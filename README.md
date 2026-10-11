@@ -60,6 +60,7 @@
 | 16 | 大厅注册开关改读 `site.json` | `config.py` + `wsgi.py`（`scripts/patch-lobby-skip-email-verify.py`） | **代码** | ⚠️ **未部署**：注册从「永远 400」→ 可注册（`docs/10`） |
 | 21 | **服务器上线改成认 `deploy/verified` 自动切** | `scripts/sp-auto-upgrade.{sh,service,timer}` + `scripts/sp-upstream-fetch.sh` | 服务 | 生产从「手工重复线 `production/upstream-0XX`」换成「机器人验过的那棵树」；服务端 **0.2.3 → 0.2.4**；浏览器客户端补上皮肤选择器（`/js/ui/skinPicker.js` 404 → 200）。每天 04:30 自动，回滚只退**一版**（旧脚本删 drop-in 会退到 0.2.1）。详见 `docs/17` |
 | 22 | **客户端也切到 0.2.4（payload c40 + 六个形态 + 玩家 Release）** | 客户端仓版本戳十处 + `README.md` + `docs/18` | **代码/产物** | 壳版本戳 0.2.3 → 0.2.4（十处一次写全，构建号 203 → 204，PR #7）；payload `payload-v0.2.4-c40` 用 `publish=ready` 切（**draft 的资产匿名 403，CI 的 `curl` 拉不到**）；六个形态收成 `v0.2.4-c40`，六个匿名 HEAD 全 200。实测一条：**`code.sha256` 不是内容指纹**（tar 条目带打包当刻 mtime，659 个文件里 646 个），能跨刀比的只有 `art.digest`。详见 `docs/18` |
+| 23 | **游戏 fork 补第一个 Release（`v0.2.4-lain42`）** | `lilyco-42/Stronghold-Protocol` 的 tag + Release | 发布记录 | 本仓此前一个 Release 都没有、tag 只到 `v0.2.3`。给 `deploy/verified`（`a8dc5091` = 线上那棵树）打了 `v0.2.4-lain42`，**不放资产**（部署 fork，玩家下载在客户端仓）。**故意不叫 `v0.2.4`**：本仓 `v0.1.0`~`v0.2.3` 与上游逐字节相同，而上游 `v0.2.4` 是 `bc50cac0`、我们是它后代（+78 个 commit），同名会让 `git fetch upstream --tags` 报 `would clobber`、并把 `git describe` 混起来（客户端出处闸门正在读它）。详见 `docs/17` §10 |
 
 ## 端到端效果
 

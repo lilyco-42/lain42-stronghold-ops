@@ -174,9 +174,9 @@ rm -f /var/lib/sp-deploy/deployed.sha     # 否则下次自动升级会以为已
 
 ## 9. 未做 / 已知缺口
 
-- **客户端 payload 还停在 0.2.3**（GitHub 上最新是 `payload-v0.2.3-c39`）。0.2.4 的打包闸门
-  已用 `cut-payload`（`game_ref=feat/skins`、`publish=no`、`out_tag=payload-v0.2.4-c40`）**干跑通过**，
-  但**没有发布**——发布是对玩家可见的动作，要单独点头。
+- ~~**客户端 payload 还停在 0.2.3**~~ → **已发**：`payload-v0.2.4-c40`（`publish=ready`）+
+  玩家 Release `v0.2.4-c40`（六个形态、六个匿名 HEAD 全 200）。客户端那一刀完整记在
+  `docs/18-client-0.2.4-cut.md`。
 - `public/fonts`（Bender / Novecento）仍缺，需从 OSS 素材包补，本机没有。
 - `production/upstream-0XX` 这条手工重复线**建议废掉**（本次已实质弃用：生产现在直接吃 `deploy/verified`）。
   否则每次上游发版都要手工重贴一遍 —— 就是这次 `data/assets.json` 卡 13 小时的同类病根。
@@ -184,3 +184,38 @@ rm -f /var/lib/sp-deploy/deployed.sha     # 否则下次自动升级会以为已
   还没提交、也没接进 `auto-sync-upstream.yml`。
 - `ci.yml` 的 ext-surface 闸门缺 `upstream` 远端（`actions/checkout` 只建 `origin`），
   导致那条闸门在 CI 里**从来跑不起来**，是各分支基线唯一的红。
+
+## 10. 本仓（游戏 fork）的发布与 tag 约定
+
+游戏 fork 在此之前**一个 Release 都没有**，tag 也只到 `v0.2.3`。这一轮补上了第一个：
+**`v0.2.4-lain42`** → `a8dc509118ac50f8db80d008cc9bcb06cd9df34c`（= `deploy/verified` = `deploy/prod`，
+即线上正在跑的那棵树）。
+
+### 为什么带 `-lain42` 而不是就叫 `v0.2.4`
+
+本仓的 `v0.1.0` ~ `v0.2.3` 与上游是**逐字节相同**的 tag —— 实测 `v0.2.3` 两边都是 `1db8e510`，
+也就是本仓**从来没自己造过 tag**。而上游的 `v0.2.4` 是 `bc50cac0`，我们的部署树是它的**后代**
+（`a8dc5091`，`git rev-list --count bc50cac0..a8dc5091` = **78**）。
+
+如果这里也叫 `v0.2.4`，同一个 tag 名就会指向两个不同的 commit：
+
+- `git fetch upstream --tags` 会报 `would clobber existing tag`，而本仓持续合并上游，这条会一直挡路；
+- `git describe` 会把两棵树混起来 —— 而 `describe` 正是**客户端打包的出处闸门**在读的东西
+  （`check-payload-provenance.mjs` 要求它末尾带 `-g<7+ 位 hex>`）。
+
+**约定：本仓自己的发布一律带 `-lain42` 后缀，与上游的 tag 名永不重合。**
+
+### Release 里放什么
+
+**不放资产。** 本仓是部署 fork，不发整合包（玩家的下载在客户端仓）。
+Release 只是"哪一刻部署了哪棵树"的记录，正文写清：commit、`/healthz` 读数、
+与上游的关系（包含上游 v0.2.4 + 78 个 commit / 199 个文件）、怎么复现这棵树、
+以及"升级不靠手打 tag"（升级的输入永远是 `deploy/verified` 这个分支）。
+
+复核：
+
+```bash
+gh release view v0.2.4-lain42 -R lilyco-42/Stronghold-Protocol --json tagName,isDraft,targetCommitish
+gh api repos/lilyco-42/Stronghold-Protocol/git/refs/tags --jq '.[].ref'   # 不应出现裸 v0.2.4
+gh api repos/sganggs/Stronghold-Protocol/git/ref/tags/v0.2.4 --jq '.object.sha'  # 上游那个不许被动过
+```
