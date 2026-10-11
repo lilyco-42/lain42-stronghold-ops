@@ -58,6 +58,7 @@
 | 19 | 已发布产物入口页的零下载抽查 | `docs/14` + `scripts/spotcheck-release-entry.py` | 工具 | zip 中央目录 + 单条 Range ≈1 MB 就能读出 353 MB 包里的 `index.html`；⚠️ Git Bash 会把 `/` 开头的参数改写成路径，会得到假 0 |
 | 20 | 换基线后的漂移核对单（含补丁配对的两种树） | `docs/13-upgrade-drift-checklist.md` | 结论 | fork 树 `03` FUZZ 2 / `03b` clean，纯净上游树反过来 —— **必须互补**；全量测试数字只在 `docs/13` §1 与各仓库 `AGENTS.md` 里写一份，别在这里再抄一遍 |
 | 16 | 大厅注册开关改读 `site.json` | `config.py` + `wsgi.py`（`scripts/patch-lobby-skip-email-verify.py`） | **代码** | ⚠️ **未部署**：注册从「永远 400」→ 可注册（`docs/10`） |
+| 21 | **服务器上线改成认 `deploy/verified` 自动切** | `scripts/sp-auto-upgrade.{sh,service,timer}` + `scripts/sp-upstream-fetch.sh` | 服务 | 生产从「手工重复线 `production/upstream-0XX`」换成「机器人验过的那棵树」；服务端 **0.2.3 → 0.2.4**；浏览器客户端补上皮肤选择器（`/js/ui/skinPicker.js` 404 → 200）。每天 04:30 自动，回滚只退**一版**（旧脚本删 drop-in 会退到 0.2.1）。详见 `docs/17` |
 
 ## 端到端效果
 
@@ -105,6 +106,10 @@ scripts/
   apply-oss-assets.mjs       把素材清单改写成 CDN 绝对 URL
   deploy.sh                  部署脚本（含步骤 2b：恢复 local 素材，防重部署丢失）
   sp-watchdog.sh + .service + .timer          自愈：FD / 熔断 / 内存 / tmpfs
+  sp-auto-upgrade.sh          把生产切到 deploy/verified 的那棵树（通用：一版一脚本结束）。
+                              幂等；先隔离端口 5199/5188 验证再碰生产；失败回滚到**切换前那棵树**（只退一版）
+  sp-auto-upgrade.service + .timer   每天 04:30（Persistent + ≤5 分钟抖动）触发上面那个
+  sp-upstream-fetch.sh        往裸仓抓 upstream-master / **verified-deploy** / fork-deploy-prod（只读，不碰生产）
   sp-apply-ws-compress.sh + .service + .timer 等没人在线时自动开 WS 压缩
   prof-stronghold.mjs / analyze-prof.mjs / close-inspector.mjs
                             给运行中的 Node 做 CPU profile（kill -USR1，不重启）
@@ -128,6 +133,8 @@ docs/
   13-upgrade-drift-checklist.md 换基线之后的漂移核对单：合并/测试/补素材/补丁预检/闸门，命令都实跑过
   14-published-artifact-spotcheck.md 不下整包抽查已发布产物的入口页（zip 中央目录 + 单条 Range，~1 MB）：实测 exe/APK 两份 index.html 仍各带 2+1 个字体外链
   15-approval-runbook.md         需要点头的三件事：一条命令 + 预期读数 + 回滚（payload 出厂 / 拆包验收 / 线上重放 03b）
+  16-oss-account-disabled.md     OSS 账号被停用：控制面活/数据面全拒的判据、影响面、以及"假 IP 差点误判成服务器挂了"
+  17-server-auto-upgrade.md      服务器上线改成认 deploy/verified 自动切：生产拓扑真相、blob 哈希判据、实测、回滚陷阱
 
 AGENTS.md                   AI 协作契约：机器/仓库地图、红线、补丁脚本五条不变量、什么才算证据
 ```
@@ -155,6 +162,13 @@ AGENTS.md                   AI 协作契约：机器/仓库地图、红线、补
    - ⚠️ 对局状态只在内存里，重启会丢掉所有进行中的对局
    - sp-apply-ws-compress.sh 默认只在「后端连接数 = 0」时才动手
    - 强制执行：sp-apply-ws-compress.sh --force
+
+5. 服务器代码（0.2.x 起：**自动，不用手打**）
+   - 机器人把「合完上游 **并跑过全部闸门**（单测 + npm run golden + ext-surface）」的树推到 `deploy/verified`
+   - 游戏机：sp-upstream-fetch.timer 抓进裸仓 → sp-auto-upgrade.timer 每天 04:30
+     隔离端口验证后自动上线，失败自动回滚到**上一版**
+   - 手动立刻上：`/usr/local/sbin/sp-auto-upgrade.sh`（幂等，SHA 没变就是空操作）
+   - ⚠️ 它会重启 stronghold = 丢掉进行中的对局，所以只在低峰窗口跑（见 `docs/17`）
 ```
 
 ## 回滚
@@ -167,6 +181,8 @@ AGENTS.md                   AI 协作契约：机器/仓库地图、红线、补
 | pingap 配置 | `cp /etc/pingap.toml.bak-sp-sim /etc/pingap.toml`（autoreload 自动加载） |
 | watchdog | `systemctl disable --now sp-watchdog.timer` |
 | 大厅注册开关（若已部署，见 `docs/10`） | `cp /opt/online-platform/{config,wsgi}.py.bak-skipverify /opt/online-platform/` 对应文件 && `systemctl restart online-platform.service`（只断大厅，不动对局） |
+| 服务器代码（自动升级，见 `docs/17`） | 把 `90-auto-deploy.conf` 里的 `WorkingDirectory`/`ExecStart`/`SP_ROOM_GAME_ROOT` 改回**上一棵树的路径**（`-candidate` 是 0.2.3）→ `daemon-reload && restart`；**并且 `rm /var/lib/sp-deploy/deployed.sha`**，否则下次自动升级会以为已经部署过而跳过 |
+| 关掉自动升级 | `systemctl disable --now sp-auto-upgrade.timer` |
 
 ## ⚠️ 几条硬规矩（踩过的）
 
@@ -180,3 +196,6 @@ AGENTS.md                   AI 协作契约：机器/仓库地图、红线、补
    `wsgi.py` 被另一处改动改成全 LF，`config.py` 未变）—— 本仓库 `*.patch` 被
    `.gitattributes` 强制成 LF，CR 会被吃掉，`patch -p1` 只会 `Hunk FAILED (different line endings)`。
    给这类文件打改动一律写 `scripts/patch-*.py`（按行匹配 + `--dry-run` + 保留各自换行符），见 `docs/10`。
+8. **systemd drop-in 是按文件名字典序叠加的** —— 后面的赢。给 stronghold 换 `ExecStart` 的新 drop-in
+   必须排在旧的前面之后（`90-` > `30-`），并且**显式把旧的改名成 `.disabled`**：留着它不只是难看，
+   一旦顺序反了会**静默赢掉**新配置，部署看起来成功、实际跑的还是旧树（`docs/17`）。

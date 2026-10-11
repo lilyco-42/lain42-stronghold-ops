@@ -1,0 +1,18 @@
+[Unit]
+Description=每天 04:30 检查 deploy/verified 并自动上线（低峰窗口）
+Documentation=https://github.com/lilyco-42/lain42-stronghold-ops
+
+[Timer]
+# 低峰窗口。**故意只用时间做闸门** —— 2026-10-05 的教训是「用在线人数当条件」会在
+# 高峰期人数短暂波动时误触发重启、把全服踢下线（见 sp-maintenance.sh 顶部注释）。
+# 04:30 这个点本身就是闸门；脚本会记录当时在线人数供事后核对。
+OnCalendar=*-*-* 04:30:00
+# 机器 04:30 没开机的话，开机后补跑一次
+Persistent=true
+# 抖动，避免和其它定时任务撞在一起
+RandomizedDelaySec=300
+AccuracySec=1min
+Unit=sp-auto-upgrade.service
+
+[Install]
+WantedBy=timers.target

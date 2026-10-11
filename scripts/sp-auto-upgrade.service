@@ -1,0 +1,16 @@
+[Unit]
+Description=Stronghold Protocol：把生产切到 deploy/verified 指向的那棵树
+Documentation=https://github.com/lilyco-42/lain42-stronghold-ops
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/sp-auto-upgrade.sh
+# 隔离验证（~10s）+ 重启 + 三处健康闸门（每处最长 40s）+ 可能一次回滚，留足余量
+TimeoutStartSec=15min
+Nice=10
+IOSchedulingClass=idle
+# 回滚会再重启一次，别让它被 OOM 干掉
+OOMScoreAdjust=-500
