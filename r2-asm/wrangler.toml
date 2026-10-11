@@ -1,0 +1,10 @@
+name = "r2-asset-asm"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# 只绑要装配的那个公开下载桶，避免一个写接口能碰到别的桶。
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "lain42-dl"
+
+# ASM_TOKEN 用 `wrangler secret put` 注入，不写在这里。
