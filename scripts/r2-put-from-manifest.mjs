@@ -17,7 +17,7 @@
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, rmSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, rmSync, existsSync, statSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
@@ -56,6 +56,7 @@ const BUCKET = arg('bucket', DEFAULT_BUCKET);
 const STAGE = arg('stage', false) ? String(arg('stage')) : '';
 const ONLY = arg('only', false) ? String(arg('only')).split(',').map((s) => s.trim()) : null;
 const FORCE = Boolean(arg('force', false));
+const FETCH = Boolean(arg('fetch', false));
 
 function sha256(buf) {
   return createHash('sha256').update(buf).digest('hex');
@@ -145,6 +146,40 @@ function upload(key, file) {
   ]);
 }
 
+// 取源两条腿之一：manifest 的 fallback 若是 GitHub 的 releases/tag 页面，
+// 用 releases API 拿到**直链**（页面 URL 不能直接当文件下）；
+// 若 fallback 本身就是一个与 mirror.file 同名的直链（例如 origin 上已有的 apk），直接用。
+// 其余（zed.dev / rustdesk.com / 7-zip.org / docs.astral.sh）一律列出来让人工确认，不猜 URL。
+function resolveSourceUrl(it) {
+  const fb = String(it.mirror.fallback || it.official || '');
+  const name = basename(it.mirror.url);
+  const tag = fb.match(/github\.com\/([^/]+)\/([^/]+)\/releases\/tag\/([^/]+)/);
+  if (tag) {
+    const tsv = execFileSync('gh', [
+      'api', `repos/${tag[1]}/${tag[2]}/releases/tags/${tag[3]}`,
+      '--jq', '.assets[] | [.name,.size,.browser_download_url] | @tsv',
+    ], { encoding: 'utf8' });
+    for (const line of tsv.split('\n')) {
+      const [assetName, assetSize, url] = line.split('\t');
+      if (assetName === name) return { url, assetSize: Number(assetSize), via: `gh:${tag[1]}/${tag[2]}@${tag[3]}` };
+    }
+    return { error: `GitHub release ${tag[1]}/${tag[2]}@${tag[3]} 里没有名为 ${name} 的 asset` };
+  }
+  if (/^https?:\/\//.test(fb) && fb.endsWith(`/${name}`)) return { url: fb, via: 'direct' };
+  return { error: `fallback 不是可自动解析的直链：${fb}` };
+}
+
+function fetchTo(name, url) {
+  const dest = join(STAGE, name);
+  mkdirSync(STAGE, { recursive: true });
+  if (existsSync(dest)) return dest;
+  execFileSync('curl', ['-sSL', '--fail', '--max-time', '3600', '-o', dest, url], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  return dest;
+}
+
 const manifest = await loadManifest();
 const base = manifest.mirrorBase;
 const items = manifest.items.filter((i) => i.mirror && i.mirror.url);
@@ -174,7 +209,8 @@ for (const it of wanted) {
   const name = basename(key);
   const want = it.mirror.sha256;
   const declared = it.mirror.size;
-  const staged = STAGE ? join(STAGE, name) : '';
+  let staged = STAGE ? join(STAGE, name) : '';
+  const staged2 = join(STAGE, name);
 
   if (!want || !/^[0-9a-f]{64}$/.test(String(want))) {
     console.log(`✗ ${it.id}: manifest 里没有可信 sha256，跳过`);
@@ -183,10 +219,36 @@ for (const it of wanted) {
   }
 
   if (!staged || !existsSync(staged)) {
-    console.log(`… ${it.id}: 没有本地源文件（stage=${STAGE || '未给'}）`);
-    needStage.push({ id: it.id, key, name, declared, fallback: it.mirror.fallback || it.official || '' });
-    skipped += 1;
-    continue;
+    if (!FETCH) {
+      console.log(`… ${it.id}: 没有本地源文件（stage=${STAGE || '未给'}）`);
+      needStage.push({ id: it.id, key, name, declared, fallback: it.mirror.fallback || it.official || '' });
+      skipped += 1;
+      continue;
+    }
+    if (!STAGE) {
+      console.log(`✗ ${it.id}: --fetch 要配合 --stage 给一个目录`);
+      skipped += 1;
+      continue;
+    }
+    const r = resolveSourceUrl(it);
+    if (r.error) {
+      console.log(`… ${it.id}: 无法自动取源（${r.error}）`);
+      needStage.push({ id: it.id, key, name, declared, fallback: it.mirror.fallback || it.official || '' });
+      skipped += 1;
+      continue;
+    }
+    const t0 = Date.now();
+    try {
+      fetchTo(name, r.url);
+    } catch (e) {
+      console.log(`✗ ${it.id}: 下载失败 ${String(e.message || e).slice(0, 160)}`);
+      skipped += 1;
+      continue;
+    }
+    const ms = Date.now() - t0;
+    const gotSize = existsSync(staged) ? statSync(staged).size : 0;
+    console.log(`↓ ${it.id}: 取源 ${r.via} 写入 ${gotSize} B（${ms} ms，约 ${(gotSize / 1048576 / (ms / 1000 || 1)).toFixed(2)} MiB/s）`);
+    staged = staged2;
   }
 
   const bytes = statSync(staged).size;
