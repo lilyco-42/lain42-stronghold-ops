@@ -59,6 +59,7 @@
 | 20 | 换基线后的漂移核对单（含补丁配对的两种树） | `docs/13-upgrade-drift-checklist.md` | 结论 | fork 树 `03` FUZZ 2 / `03b` clean，纯净上游树反过来 —— **必须互补**；全量测试数字只在 `docs/13` §1 与各仓库 `AGENTS.md` 里写一份，别在这里再抄一遍 |
 | 16 | 大厅注册开关改读 `site.json` | `config.py` + `wsgi.py`（`scripts/patch-lobby-skip-email-verify.py`） | **代码** | ⚠️ **未部署**：注册从「永远 400」→ 可注册（`docs/10`） |
 | 21 | **服务器上线改成认 `deploy/verified` 自动切** | `scripts/sp-auto-upgrade.{sh,service,timer}` + `scripts/sp-upstream-fetch.sh` | 服务 | 生产从「手工重复线 `production/upstream-0XX`」换成「机器人验过的那棵树」；服务端 **0.2.3 → 0.2.4**；浏览器客户端补上皮肤选择器（`/js/ui/skinPicker.js` 404 → 200）。每天 04:30 自动，回滚只退**一版**（旧脚本删 drop-in 会退到 0.2.1）。详见 `docs/17` |
+| 22 | **客户端也切到 0.2.4（payload c40 + 六个形态 + 玩家 Release）** | 客户端仓版本戳十处 + `README.md` + `docs/18` | **代码/产物** | 壳版本戳 0.2.3 → 0.2.4（十处一次写全，构建号 203 → 204，PR #7）；payload `payload-v0.2.4-c40` 用 `publish=ready` 切（**draft 的资产匿名 403，CI 的 `curl` 拉不到**）；六个形态收成 `v0.2.4-c40`，六个匿名 HEAD 全 200。实测一条：**`code.sha256` 不是内容指纹**（tar 条目带打包当刻 mtime，659 个文件里 646 个），能跨刀比的只有 `art.digest`。详见 `docs/18` |
 
 ## 端到端效果
 
@@ -135,6 +136,8 @@ docs/
   15-approval-runbook.md         需要点头的三件事：一条命令 + 预期读数 + 回滚（payload 出厂 / 拆包验收 / 线上重放 03b）
   16-oss-account-disabled.md     OSS 账号被停用：控制面活/数据面全拒的判据、影响面、以及"假 IP 差点误判成服务器挂了"
   17-server-auto-upgrade.md      服务器上线改成认 deploy/verified 自动切：生产拓扑真相、blob 哈希判据、实测、回滚陷阱
+  18-client-0.2.4-cut.md         客户端 0.2.4 那一刀：版本戳十处、payload c40 怎么切（为何必须 publish=ready）、
+                                 独立复核了什么、`code.sha256` 不是内容指纹、六个形态与玩家 Release 的验收
 
 AGENTS.md                   AI 协作契约：机器/仓库地图、红线、补丁脚本五条不变量、什么才算证据
 ```
