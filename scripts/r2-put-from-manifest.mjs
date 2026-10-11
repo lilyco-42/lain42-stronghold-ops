@@ -22,7 +22,12 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
 const MANIFEST_URL = 'https://lain42.top/downloads/manifest.json';
-const DEFAULT_BUCKET = 'lain42-downloads';
+// 公开下载必须独占一个桶：R2 自定义域名会把**整桶**变成可公开读。
+// 今天实测：把 dl.lilyco42.top 绑到已有桶 lain42-downloads 之后，
+// 那个桶里属于另一个项目的 sources/<name>/<sha>/source.zip（见
+// lain/.private/r2-main-b7c8a21/backend/project-artifacts.json）立刻变成 200 可下载，
+// 撤掉域名才回 404。所以这里用新建的 lain42-dl。
+const DEFAULT_BUCKET = 'lain42-dl';
 
 const MIME = {
   '.exe': 'application/vnd.microsoft.portable-executable',
