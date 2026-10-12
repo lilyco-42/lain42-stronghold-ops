@@ -40,5 +40,5 @@ jobs:
         # 两个来源都必须非空，否则"清单被线上删空"也会显示成全绿。
         run: |
           node scripts/build-dl-mirror-expected.mjs
-          node -e "const t=require('./scripts/dl-mirror-expected.json');const c=(s)=>t.items.filter(i=>i.src===s).length;if(t.items.length<50||c('manifest')<20||c('csv')<30)throw new Error('期望表来源残缺：共 '+t.items.length+'，manifest '+c('manifest')+'，csv '+c('csv'));console.log('PASS 期望表 '+t.items.length+' 条（manifest '+c('manifest')+'，csv '+c('csv')+'，knownGaps '+t.knownGaps.length+'）')"
+          node -e "const t=require('./scripts/dl-mirror-expected.json');const c=(s)=>t.items.filter(i=>i.src===s).length;const p=(s)=>t.items.filter(i=>i.src===s&&i.sha256).length;if(t.items.length<50||p('manifest')<20||p('csv')<30)throw new Error('期望表残缺：共 '+t.items.length+'，manifest '+c('manifest')+'/有pin '+p('manifest')+'，csv '+c('csv')+'/有pin '+p('csv'));console.log('PASS 期望表 '+t.items.length+' 条（manifest '+c('manifest')+'，csv '+c('csv')+'，可验字节 '+p('csv')+' 条，knownGaps '+t.knownGaps.length+'）')"
           git diff --exit-code -- scripts/dl-mirror-expected.json

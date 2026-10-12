@@ -6,7 +6,7 @@
 //             必须是仓库内的快照而不是 D:/Code/_staging 里的草稿：那条路径只有我本机有，
 //             CI 里 readFileSync 直接 ENOENT，而工作流那一步用 `|| echo` 把失败吞成了 success，
 //             于是这道防"我改漏"的闸门其实一次都没跑过。
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -48,8 +48,17 @@ for (const it of manifest.items) {
 }
 
 const snap = JSON.parse(readFileSync(here + 'dl-mirror-csv-snapshot.json', 'utf8'));
+// 33 条 csv 资产当年只回读校验过、没处存哈希，所以之前只能断长度与类型。
+// 现在 scripts/dl-mirror-csv-sha.json 存着"本机源文件与 R2 现对象双向算一致"的 sha256
+// （由 scripts/pin-csv-assets.mjs 生成，两边不一致的键不会出现在里面）。
+let csvSha = new Map();
+if (existsSync(here + 'dl-mirror-csv-sha.json')) {
+  csvSha = new Map(
+    JSON.parse(readFileSync(here + 'dl-mirror-csv-sha.json', 'utf8')).rows.map((r) => [r.key, r.sha256])
+  );
+}
 for (const r of snap.rows) {
-  rows.push({ key: r.key, size: r.size, sha256: null, ct: r.ct, src: 'csv', id: r.key });
+  rows.push({ key: r.key, size: r.size, sha256: csvSha.get(r.key) ?? null, ct: r.ct, src: 'csv', id: r.key });
 }
 
 const out = {
@@ -57,7 +66,10 @@ const out = {
   // 来判断期望表是否落后于线上 manifest。带时间戳会让它每次都不同 → 闸门永远报警，
   // 而天天红的闸门等于没有闸门。
   base: 'https://dl.lilyco42.top',
-  note: 'sha256 只来自下载站 manifest；csv 项当年已逐条上传并回读校验，这里只锁长度与 Content-Type。',
+  note:
+    'manifest 项的 sha256 来自下载站清单本身；csv 项的 sha256 来自"本机当年上传的源文件"与"R2 现对象"双向计算相等' +
+    '（见 dl-mirror-csv-sha.json / pin-csv-assets.mjs）。两类强度的来源不同，但都到了字节级；csv 那条不能声称与某个权威上游一致，' +
+    '因为这些 npm/包文件本身没有存哈希的清单。',
   knownGaps: [
     { id: 'lyco-jev', why: 'manifest 钉 623029300 B / 3947c93b…；源站现文件 1155579350 B（Oct 3 起），pin 那份只在停用的 OSS。源站 fallback 实测境内 206/30 ms、content-type 正确 → 改链接可用，但换的是另一个 build，等用户决定重钉' },
     { id: 'cute-pet', why: 'pin 801aa079… vs GitHub 现资产 0cd6f668…（同尺寸不同字节）；源站无 /cute-pet-dl/ 路径（实测 404），所以没有"改链接即可"这条路，只能重钉后上传，等用户决定' },
