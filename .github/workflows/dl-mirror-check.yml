@@ -1,0 +1,38 @@
+name: dl-mirror 公开下载键持续验收
+
+# 为什么单独一条：dl.lain42.top（阿里云 OSS）停用之后，站内链接要切到
+# dl.lilyco42.top；切过去之后坏一个键就是用户 404，而这条没人手工盯就不算交付完。
+# 浅模式只查头（状态/长度/Content-Type/Range），deep 模式额外整段流式回读比 manifest 的 sha256。
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      deep:
+        description: '额外对最小的 N 条做整段 sha256 校验（0 = 不做）'
+        required: false
+        default: '0'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 验收 dl.lilyco42.top 的每个键
+        env:
+          DEEP: ${{ github.event.inputs.deep || '0' }}
+        run: |
+          if [ "$DEEP" != "0" ]; then
+            node scripts/check-dl-mirror.mjs --deep "$DEEP"
+          else
+            node scripts/check-dl-mirror.mjs
+          fi
+      - name: 期望表本身要和线上 manifest 对齐（防我改漏）
+        run: node scripts/build-dl-mirror-expected.mjs && git diff --exit-code scripts/dl-mirror-expected.json || echo '::warning::期望表与线上 manifest 已有差异，请复核后提交'

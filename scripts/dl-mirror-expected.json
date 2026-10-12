@@ -1,0 +1,460 @@
+{
+  "base": "https://dl.lilyco42.top",
+  "note": "sha256 只来自下载站 manifest；csv 项当年已逐条上传并回读校验，这里只锁长度与 Content-Type。",
+  "knownGaps": [
+    {
+      "id": "lyco",
+      "why": "mirror.url 本就指向源站 lain42.top/lyco-dl/…，不是 OSS 对象，无需迁"
+    },
+    {
+      "id": "lyco-jev",
+      "why": "manifest 钉 623029300 B；源站文件自 Oct 3 起是 1155579350 B，pin 那份只在停用的 OSS → 等用户决定"
+    },
+    {
+      "id": "cute-pet",
+      "why": "pin 801aa079… vs GitHub 现资产 0cd6f668…（同尺寸不同字节），重钉还是顶用等用户决定"
+    }
+  ],
+  "items": [
+    {
+      "key": "lyco-dl/lyco-windows.zip",
+      "size": 4539333,
+      "sha256": "6538286b3c291291f9027ba1d450e46fa05eca21d2576572adad3b370a929cda",
+      "ct": "application/zip",
+      "src": "manifest",
+      "id": "lyco"
+    },
+    {
+      "key": "downloads/clash-verge-rev/v2.5.2/Clash.Verge_2.5.2_x64-setup.exe",
+      "size": 46964366,
+      "sha256": "ba42f00b1082e352352080170fe86ae411bcc854cb13f1b8bebc9025e8a7cbf4",
+      "ct": "application/vnd.microsoft.portable-executable",
+      "src": "manifest",
+      "id": "clash-verge-rev"
+    },
+    {
+      "key": "downloads/v2rayn/7.24.9/v2rayN-windows-64-desktop.zip",
+      "size": 132305821,
+      "sha256": "fbf187b3eca3e391bf348cc559bb458ab6d8f5cd5afdfbce5de45b01c26bd179",
+      "ct": "application/zip",
+      "src": "manifest",
+      "id": "v2rayn"
+    },
+    {
+      "key": "downloads/zed/1.20.2/Zed-x86_64.exe",
+      "size": 85627488,
+      "sha256": "82c2f6e682a73e3fca7102b49582101e44137defe8d002d5fc890213eb0153de",
+      "ct": "application/vnd.microsoft.portable-executable",
+      "src": "manifest",
+      "id": "zed"
+    },
+    {
+      "key": "downloads/rustdesk/1.4.9/rustdesk-1.4.9-x86_64.exe",
+      "size": 24472432,
+      "sha256": "eaedeb0088e687bf46f7c46a9c6ea5493ce51f3134dfd6acbedb47b5b9136274",
+      "ct": "application/vnd.microsoft.portable-executable",
+      "src": "manifest",
+      "id": "rustdesk"
+    },
+    {
+      "key": "downloads/uv/0.12.17/uv-x86_64-pc-windows-msvc.zip",
+      "size": 17906210,
+      "sha256": "a252121d5b59398fcb137c6ea448176459a44010f33f67e0072305a637119ca7",
+      "ct": "application/zip",
+      "src": "manifest",
+      "id": "uv"
+    },
+    {
+      "key": "downloads/7zip/25.01/7z2501-x64.exe",
+      "size": 1643509,
+      "sha256": "78afa2a1c773caf3cf7edf62f857d2a8a5da55fb0fff5da416074c0d28b2b55f",
+      "ct": "application/vnd.microsoft.portable-executable",
+      "src": "manifest",
+      "id": "7zip"
+    },
+    {
+      "key": "downloads/models/Qwen3-0.6B-Q4_K_M.gguf",
+      "size": 396705472,
+      "sha256": "ac2d97712095a558e31573f62f466a3f9d93990898b0ec79d7c974c1780d524a",
+      "ct": "application/octet-stream",
+      "src": "manifest",
+      "id": "lilyco-qwen3-06b"
+    },
+    {
+      "key": "downloads/models/UGround-V1-2B.Q2_K.gguf",
+      "size": 676303712,
+      "sha256": "36483e9e1d19e75d0e2567ab8ed7f40e269200928880e8ba892eb9251277ecd6",
+      "ct": "application/octet-stream",
+      "src": "manifest",
+      "id": "lilyco-uground-2b"
+    },
+    {
+      "key": "downloads/models/router_v13-Q4_K_M.gguf",
+      "size": 484219648,
+      "sha256": "2688b737ec1676dce3c691f38f6c240ce6142329863eb9b989ff7593db57e9ee",
+      "ct": "application/octet-stream",
+      "src": "manifest",
+      "id": "lyco-router-v13"
+    },
+    {
+      "key": "downloads/lyco-jev/lyco-jev-android-arm64.apk",
+      "size": 623029300,
+      "sha256": "3947c93b56c1cfa62a597db52736ef31c2776fd57ba79106aeae0e6c4c4a8b42",
+      "ct": "application/vnd.android.package-archive",
+      "src": "manifest",
+      "id": "lyco-jev"
+    },
+    {
+      "key": "downloads/nekobox/1.4.2/NekoBox-1.4.2-arm64-v8a.apk",
+      "size": 15252519,
+      "sha256": "d01e76feeb05e4701f3ae382cb71c0a3ebb77039005e5893f8817e1051f8ac28",
+      "ct": "application/vnd.android.package-archive",
+      "src": "manifest",
+      "id": "nekobox"
+    },
+    {
+      "key": "downloads/clashmi/1.0.30.1605/clashmi-1.0.30.1605-arm64-v8a.apk",
+      "size": 52103310,
+      "sha256": "190cedb1d12d67936dca1a19a284d1820bd20a28e47e3a8aa355d5dcb8f62994",
+      "ct": "application/vnd.android.package-archive",
+      "src": "manifest",
+      "id": "clashmi"
+    },
+    {
+      "key": "downloads/clashmeta/2.11.35/cmfa-2.11.35-meta-arm64-v8a-release.apk",
+      "size": 48780036,
+      "sha256": "af7f05d8801798a8e75de682e5f67070138becb8623b7a341c3e5cd042a3753d",
+      "ct": "application/vnd.android.package-archive",
+      "src": "manifest",
+      "id": "clashmeta"
+    },
+    {
+      "key": "downloads/ghboost/0.3.17/lilyco-ghboost-0.3.17-x86_64.msi",
+      "size": 12152832,
+      "sha256": "d92cc0b3d18a1395a683215879925766027bf1c97983fcb19e515883ee117181",
+      "ct": "application/x-msdownload",
+      "src": "manifest",
+      "id": "ghboost"
+    },
+    {
+      "key": "downloads/stemscan/0.1.0/stemscan-x86_64-pc-windows-msvc.exe",
+      "size": 3675136,
+      "sha256": "745d5e48109b9b0148d856c1f8e6cf1769333829f81641ad8cf89fb14f43a5c4",
+      "ct": "application/vnd.microsoft.portable-executable",
+      "src": "manifest",
+      "id": "stemscan"
+    },
+    {
+      "key": "downloads/simul-overlay/0.2.0/simul-overlay_0.2.0_x64-setup.exe",
+      "size": 1691201,
+      "sha256": "81c68aa66476c1646f7cecfa4b532b9eb3556f78ab39b5c86aa638988fdb9e49",
+      "ct": "application/vnd.microsoft.portable-executable",
+      "src": "manifest",
+      "id": "simul-overlay"
+    },
+    {
+      "key": "downloads/cute-pet/0.3.5/cute-pet-shell.apk",
+      "size": 42715247,
+      "sha256": "801aa079bbec675b736d486015fc5257068ed903310120f9f6f3d7a3d89aaf10",
+      "ct": "application/vnd.android.package-archive",
+      "src": "manifest",
+      "id": "cute-pet"
+    },
+    {
+      "key": "downloads/mc-remote/0.1.0/mc_remote.exe",
+      "size": 19379200,
+      "sha256": "77a54622d3f04621afd5e5195095f5e62b1e89ccaee209904030ba8f56dc7079",
+      "ct": "application/vnd.microsoft.portable-executable",
+      "src": "manifest",
+      "id": "mc-remote"
+    },
+    {
+      "key": "downloads/mirage-tank/0.1.0/mirage-tank-v0.1.0.apk",
+      "size": 1266371,
+      "sha256": "54072f9e00fd0606e7b19a523e8c67bca03db2657c29cb3fda0c45fba6b4e3f9",
+      "ct": "application/vnd.android.package-archive",
+      "src": "manifest",
+      "id": "mirage-tank"
+    },
+    {
+      "key": "downloads/stronghold-protocol/0.1.3-c11/StrongholdProtocol-desktop-win-x64-0.1.3-c11.zip",
+      "size": 360850482,
+      "sha256": "ac73d722bd1b75076c9dc862166c4ff2b4c079a7019fb24f9f184e6ea774e430",
+      "ct": "application/zip",
+      "src": "manifest",
+      "id": "stronghold-protocol-windows"
+    },
+    {
+      "key": "downloads/stronghold-protocol/0.1.3-c11/Stronghold-0.1.3-c11-android-debug.apk",
+      "size": 232320951,
+      "sha256": "59efc557e709410cc96499f1139a2e5b8ef9e1a0e7c04509181fe9e68519a1fc",
+      "ct": "application/vnd.android.package-archive",
+      "src": "manifest",
+      "id": "stronghold-protocol-android"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/browsercc-index.js",
+      "size": 5296,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/browsercc-index.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/browsercc.js",
+      "size": 5296,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/browsercc.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/clang.js",
+      "size": 74193,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/clang.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/clang.wasm",
+      "size": 42553880,
+      "sha256": null,
+      "ct": "application/wasm",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/clang.wasm"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/clingswasm.js",
+      "size": 5505,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/clingswasm.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/debug.js",
+      "size": 414,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/debug.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/fd.js",
+      "size": 1906,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/fd.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/fs_mem.js",
+      "size": 12206,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/fs_mem.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/fs_opfs.js",
+      "size": 2280,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/fs_opfs.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/index.js",
+      "size": 316,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/index.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/lld.js",
+      "size": 71604,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/lld.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/lld.wasm",
+      "size": 23202572,
+      "sha256": null,
+      "ct": "application/wasm",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/lld.wasm"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/strace.js",
+      "size": 318,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/strace.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/sysroot.tar",
+      "size": 28620800,
+      "sha256": null,
+      "ct": "application/x-tar",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/sysroot.tar"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/wasi_defs.js",
+      "size": 9027,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/wasi_defs.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/wasi.js",
+      "size": 16429,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lilyco-clang/e19dc5c/wasi.js"
+    },
+    {
+      "key": "wasm/lyco-chat/e19dc5c/pkg/lyco_chat_wasm.js",
+      "size": 8089,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/lyco-chat/e19dc5c/pkg/lyco_chat_wasm.js"
+    },
+    {
+      "key": "wasm/lyco-chat/e19dc5c/pkg/lyco_chat_wasm_bg.wasm",
+      "size": 60812,
+      "sha256": null,
+      "ct": "application/wasm",
+      "src": "csv",
+      "id": "wasm/lyco-chat/e19dc5c/pkg/lyco_chat_wasm_bg.wasm"
+    },
+    {
+      "key": "wasm/highs/1.15.3/build/highs.mjs",
+      "size": 168088,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/highs/1.15.3/build/highs.mjs"
+    },
+    {
+      "key": "wasm/highs/1.15.3/build/highs.wasm",
+      "size": 3531385,
+      "sha256": null,
+      "ct": "application/wasm",
+      "src": "csv",
+      "id": "wasm/highs/1.15.3/build/highs.wasm"
+    },
+    {
+      "key": "wasm/licenses/highs-1.15.3/LICENSE",
+      "size": 1090,
+      "sha256": null,
+      "ct": "application/octet-stream",
+      "src": "csv",
+      "id": "wasm/licenses/highs-1.15.3/LICENSE"
+    },
+    {
+      "key": "wasm/magick-wasm/0.0.43/dist/index.js",
+      "size": 409198,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/magick-wasm/0.0.43/dist/index.js"
+    },
+    {
+      "key": "wasm/magick-wasm/0.0.43/dist/x64/magick.wasm",
+      "size": 15202085,
+      "sha256": null,
+      "ct": "application/wasm",
+      "src": "csv",
+      "id": "wasm/magick-wasm/0.0.43/dist/x64/magick.wasm"
+    },
+    {
+      "key": "wasm/licenses/magick-wasm-0.0.43/LICENSE",
+      "size": 11358,
+      "sha256": null,
+      "ct": "application/octet-stream",
+      "src": "csv",
+      "id": "wasm/licenses/magick-wasm-0.0.43/LICENSE"
+    },
+    {
+      "key": "wasm/licenses/magick-wasm-0.0.43/NOTICE",
+      "size": 220332,
+      "sha256": null,
+      "ct": "application/octet-stream",
+      "src": "csv",
+      "id": "wasm/licenses/magick-wasm-0.0.43/NOTICE"
+    },
+    {
+      "key": "wasm/ffmpeg/0.12.10/dist/umd/ffmpeg.js",
+      "size": 4126,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/ffmpeg/0.12.10/dist/umd/ffmpeg.js"
+    },
+    {
+      "key": "wasm/ffmpeg/0.12.10/dist/umd/814.ffmpeg.js",
+      "size": 2648,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/ffmpeg/0.12.10/dist/umd/814.ffmpeg.js"
+    },
+    {
+      "key": "wasm/ffmpeg-util/0.12.1/dist/umd/index.js",
+      "size": 3286,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/ffmpeg-util/0.12.1/dist/umd/index.js"
+    },
+    {
+      "key": "wasm/ffmpeg-core/0.12.6/dist/umd/ffmpeg-core.js",
+      "size": 114673,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/ffmpeg-core/0.12.6/dist/umd/ffmpeg-core.js"
+    },
+    {
+      "key": "wasm/ffmpeg-core/0.12.6/dist/umd/ffmpeg-core.wasm",
+      "size": 32129114,
+      "sha256": null,
+      "ct": "application/wasm",
+      "src": "csv",
+      "id": "wasm/ffmpeg-core/0.12.6/dist/umd/ffmpeg-core.wasm"
+    },
+    {
+      "key": "wasm/rdkit/2026.3.6/dist/RDKit_minimal.js",
+      "size": 105843,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/rdkit/2026.3.6/dist/RDKit_minimal.js"
+    },
+    {
+      "key": "wasm/rdkit/2026.3.6/dist/RDKit_minimal.wasm",
+      "size": 7333095,
+      "sha256": null,
+      "ct": "application/wasm",
+      "src": "csv",
+      "id": "wasm/rdkit/2026.3.6/dist/RDKit_minimal.wasm"
+    },
+    {
+      "key": "wasm/opencv/4.13.0/opencv.js",
+      "size": 10964323,
+      "sha256": null,
+      "ct": "application/javascript",
+      "src": "csv",
+      "id": "wasm/opencv/4.13.0/opencv.js"
+    }
+  ]
+}
