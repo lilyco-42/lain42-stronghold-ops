@@ -71,8 +71,9 @@ const out = {
     '（见 dl-mirror-csv-sha.json / pin-csv-assets.mjs）。两类强度的来源不同，但都到了字节级；csv 那条不能声称与某个权威上游一致，' +
     '因为这些 npm/包文件本身没有存哈希的清单。',
   knownGaps: [
-    { id: 'lyco-jev', why: 'manifest 钉 623029300 B / 3947c93b…；源站现文件 1155579350 B（Oct 3 起），pin 那份只在停用的 OSS。源站 fallback 实测境内 206/30 ms、content-type 正确 → 改链接可用，但换的是另一个 build，等用户决定重钉' },
-    { id: 'cute-pet', why: 'pin 801aa079… vs GitHub 现资产 0cd6f668…（同尺寸不同字节）；源站无 /cute-pet-dl/ 路径（实测 404），所以没有"改链接即可"这条路，只能重钉后上传，等用户决定' },
+    { id: 'lyco-jev', why: 'manifest 钉 623029300 B / 3947c93b…，那份只在已停用的 OSS 里（服务器与本机按精确尺寸全盘搜过，无副本）。源站现文件是另一个 build：1155579350 B / sha256 3b47b18b…（就地算的），境内实测 206/30 ms、类型正确 → 改链接技术上可用，但换的是 build、与 pin 冲突，等用户决定重钉' },
+    // cute-pet 不再是 gap：pin 那份字节在服务器 /tmp 里还活着（2026-10-03 的副本，
+    // sha256 801aa079… 与 manifest 逐字节相同），已 scp→校验→灌进 R2→回读校验→公网两种客户端复验。
   ],
   items: rows,
 };

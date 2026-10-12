@@ -27,14 +27,20 @@
   （2026-10-12 实测 33/33 一致、0 条不一致）。
   所以这条只能声称"桶里的字节 == 我上传的字节"，**不能**声称"与某个权威上游一致"。
 
-已知待定 `knownGaps` 只有 2 条，都在表里写清了理由，脚本会 SKIP 它们并保证 `checked == items - skipped`（防止
+已知待定 `knownGaps` 只剩 1 条，表里写清了理由，脚本会 SKIP 它们并保证 `checked == items - skipped`（防止
 "全表被清空也显示全绿"）：
 
-- `lyco-jev`：manifest 钉 623,029,300 B / `3947c93b…`，那份只在停用的 OSS 里；源站 fallback
-  `lain42.top/lyco-jev-dl/…` 境内实测 206、总长 1,155,579,350 B、类型正确。**改链接技术上可行**，
-  但用户拿到的是另一个 build → 这是"重钉还是换 build"的决定，不是我能替做的。
-- `cute-pet`：pin `801aa079…` vs GitHub 现资产 `0cd6f668…`（同尺寸不同字节，资产在打 pin 之后重传过）。
-  源站**没有** `/cute-pet-dl/` 路径（实测 404），所以连"改链接"这条路都不存在，只能决定重钉还是顶用。
+- `lyco-jev`：manifest 钉 623,029,300 B / `3947c93b…`，那份字节只在停用的 OSS 里 —— 服务器与本机都按**精确尺寸**
+  全盘搜过（`find / -size 623029300c`），没有副本。源站 `lain42.top/lyco-jev-dl/…` 是**另一个 build**：
+  就地算出 1,155,579,350 B / sha256 `3b47b18b…`，境内 206 / 30 ms / 类型正确。
+  **改链接技术上可行**，但用户拿到的是不同的 build → 这是"重钉还是换 build"的决定，不是我能替做的。
+
+`cute-pet` 已经不再是待定项（2026-10-12 找回原字节，不需要决定）：GitHub 上 v0.3.5 那个同名资产在 10-10 被重传过
+（同尺寸不同字节），但 **pin 那份字节在服务器 `/tmp/cute-pet-shell.apk` 里还活着**（10-03 的副本，
+sha256 `801aa079…` 与 manifest 逐字节相同）。链路是 scp 回本机 → 重新算 sha256 仍等于 pin → 确认是合法 APK
+（zip magic、24 个条目、含 AndroidManifest/classes/resources.arsc）→ `wrangler put` 到
+`lain42-dl/downloads/cute-pet/0.3.5/cute-pet-shell.apk` → 回读 sha256 一致 → 公网整段 GET（严格客户端）与
+Range 各验一次 → 境内整段下载 42,715,247 B / 11.7 s / 3.6 MB/s。服务器那份 `/tmp` 副本不是我的，没有删。
 
 ## 怎么加一条 / 怎么改钉
 
