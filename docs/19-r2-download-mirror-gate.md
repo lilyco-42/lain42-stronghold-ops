@@ -12,7 +12,7 @@
 | 车道 | 文件 | 频率 | 断言强度 |
 |---|---|---|---|
 | 浅 | `.github/workflows/dl-mirror-check.yml` | **父车道 `sp-room-api` 每次跑完自动触发**（4 个 cron 槽位只当冗余） | 每个键：HTTP 200/206、长度==期望、Content-Type、Range 被接受 |
-| 全量 | `.github/workflows/dl-mirror-deep.yml` | 每月 1 日与 15 日 04:37 UTC + 手工 dispatch | 上面全部 **+ 整段回读比 sha256**（≈2.7 GiB） |
+| 全量 | `.github/workflows/dl-mirror-deep.yml` | cron 每月 1/15 日 04:37 UTC **+ 被父车道带起来时的日历守卫**（只有 1/15 日真跑）+ 手工 dispatch | 上面全部 **+ 整段回读比 sha256**（2.7 GiB，实测约 1 分钟走完） |
 
 **浅车道为什么不靠 cron（这一段是纠正我自己上一轮的判断）**：把它从每天一次改成一天四次之后，
 到点的槽位仍然一个 run 都没产生 —— 15:17 UTC 过期 1h19m 时本仓 0 run，提醒器仓 12:23 UTC 的
