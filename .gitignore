@@ -10,3 +10,6 @@ ws-frames.json
 # python 测试跑出来的字节码
 __pycache__/
 *.pyc
+
+# wrangler 在仓库目录里落的本机缓存/本地状态，不是仓库内容（今天被我触发了 r2 命令后出现）
+.wrangler/
