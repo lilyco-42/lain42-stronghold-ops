@@ -78,7 +78,12 @@ async function streamSha(key) {
   resetStall();
   try {
     const res = await fetch(`${BASE}/${key}`, { signal: ac.signal });
-    if (!res.ok) return { status: res.status, bytes: 0, sha: null };
+    if (!res.ok) {
+      // 不消费/取消响应体就 return，undici 会在进程退出时把这个半开的连接炸掉：
+      // 本机测试里表现为退出码 3221226505（0xC0000409），而不是预期的 1 —— 断言全对但闸门"崩了"。
+      await res.body?.cancel().catch(() => {});
+      return { status: res.status, bytes: 0, sha: null };
+    }
     const h = createHash('sha256');
     const rd = res.body.getReader();
     for (;;) {
@@ -156,20 +161,25 @@ console.log(
     DEEP ? `（deep=${DEEP_RAW} 已做整段哈希 ${hashed} 条）` : '（浅模式：只验状态/长度/类型/Range）'
   }`
 );
+// 这里一律用 process.exitCode 而不是 process.exit()：exit() 会在 undici 的 keep-alive socket
+// 还开着的时候强退，Windows 上直接触发 libuv 断言
+//   Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\win\async.c:76
+// 于是"闸门判定为红"变成退出码 3221226505（0xC0000409），断言内容全对但看起来像崩了。
+// Linux runner 上看不出这个问题（那里强退不炸），而失败路径本身在 CI 里还从没红过 —— 两边都不测就等于没测。
 if (fails.length) {
   console.error('失败明细：\n' + fails.map((f) => '  ✗ ' + f).join('\n'));
-  process.exit(1);
+  process.exitCode = 1;
 }
 if (checked < exp.items.length - skipped) {
   console.error(`断言条数对不上：checked=${checked} 应=${exp.items.length - skipped}`);
-  process.exit(1);
+  process.exitCode = 1;
 }
 // all 模式下不许出现"只哈希了子集却报全通过"：覆盖面由 expected.json 里有没有 pin 决定
 if (DEEP_ALL) {
   const pinnedAll = exp.items.filter((i) => i.sha256 && !gapIds.has(i.id)).length;
   if (hashed !== pinnedAll) {
     console.error(`deep=all 应该哈希 ${pinnedAll} 条，实际 ${hashed} 条`);
-    process.exit(1);
+    process.exitCode = 1;
   }
 }
-console.log('dl-mirror 全部通过');
+if (!process.exitCode) console.log('dl-mirror 全部通过');

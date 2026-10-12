@@ -91,6 +91,9 @@ console.log(
 );
 if (problems.length) {
   console.error('问题明细：\n' + problems.map((p) => '  ✗ ' + p).join('\n'));
-  process.exit(1);
+  // 用 exitCode 不用 exit()：还有 undici 的 keep-alive socket 挂着时强退会在 Windows 上触发
+  // libuv 断言（src\win\async.c:76），把"判定失败"变成看起来像崩溃的 0xC0000409
+  process.exitCode = 1;
+} else {
+  console.log(`已写 ${outPath}`);
 }
-console.log(`已写 ${outPath}`);
