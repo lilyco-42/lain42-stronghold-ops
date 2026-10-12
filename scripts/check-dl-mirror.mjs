@@ -20,7 +20,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const exp = JSON.parse(readFileSync(join(root, 'scripts/dl-mirror-expected.json'), 'utf8'));
-const BASE = exp.base;
+const BASE = process.env.DL_MIRROR_BASE || exp.base;
+// base / 停顿阈值可以用环境变量覆盖，是为了让"链路卡住"这条分支能被真的测到：
+// 上一版这条分支没被测过，异常直接掀掉整个 job 而不是一行 ✗（CI run 38234496095 就是这么红的）。
+const STALL_ENV = Number(process.env.DL_STALL_MS || 0);
 // --deep 允许数字或 "all"。用数字时它是"最小的 N 条"，所以清单新增条目会悄悄缩小覆盖面；
 // 月度那条车道传 all，覆盖面由 expected.json 决定，不由工作流里的常数决定。
 const DEEP_RAW = process.argv.includes('--deep') ? String(process.argv[process.argv.indexOf('--deep') + 1] || '3') : '0';
@@ -55,21 +58,43 @@ async function probe(key) {
   };
 }
 
+// 超时要用"停顿"而不是"总时长"：CI 实测第 19 条（645 MiB 的 gguf）在总时长 5 分钟的
+// AbortSignal 下被掐死，而前面 378 MiB 那条只用了 7 秒 —— 大对象慢不代表会失败，
+// 用总时长掐它就是在制造假故障。现在：连续 STALL_MS 拿不到任何字节才算链路死了，
+// 另给一个很宽的总上限只是防"永远挂在那里"。异常一定要变成 ✗ 行，不能把整个 job 炸掉。
+const STALL_MS = STALL_ENV > 0 ? STALL_ENV : 90_000;
+const OVERALL_MS = 15 * 60_000;
+
 async function streamSha(key) {
-  // 单条 5 分钟够用：最大的对象 645 MiB，只要平均 >2.2 MB/s 就能过；
-  // 真的那么慢说明链路本身有问题，让它失败比让整条车道挂到工作流超时更有信息量。
-  const res = await fetch(`${BASE}/${key}`, { signal: AbortSignal.timeout(300000) });
-  if (!res.ok) return { status: res.status };
-  const h = createHash('sha256');
+  const ac = new AbortController();
+  const started = Date.now();
   let bytes = 0;
-  const rd = res.body.getReader();
-  for (;;) {
-    const { done, value } = await rd.read();
-    if (done) break;
-    h.update(value);
-    bytes += value.length;
+  let stallTimer = null;
+  const resetStall = () => {
+    if (stallTimer) clearTimeout(stallTimer);
+    stallTimer = setTimeout(() => ac.abort(new Error(`连续 ${STALL_MS / 1000}s 没收到字节`)), STALL_MS);
+  };
+  const overall = setTimeout(() => ac.abort(new Error(`超过 ${OVERALL_MS / 60000} 分钟总上限`)), OVERALL_MS);
+  resetStall();
+  try {
+    const res = await fetch(`${BASE}/${key}`, { signal: ac.signal });
+    if (!res.ok) return { status: res.status, bytes: 0, sha: null };
+    const h = createHash('sha256');
+    const rd = res.body.getReader();
+    for (;;) {
+      const { done, value } = await rd.read();
+      if (done) break;
+      h.update(value);
+      bytes += value.length;
+      resetStall();
+    }
+    return { status: res.status, bytes, sha: h.digest('hex'), secs: (Date.now() - started) / 1000 };
+  } catch (e) {
+    return { status: 'ABORT', bytes, sha: null, err: String(e?.cause?.message ?? e?.message ?? e).slice(0, 80) };
+  } finally {
+    if (stallTimer) clearTimeout(stallTimer);
+    clearTimeout(overall);
   }
-  return { status: res.status, bytes, sha: h.digest('hex') };
 }
 
 for (const it of exp.items) {
@@ -111,10 +136,16 @@ if (DEEP) {
     const rate = ((got.bytes || 0) / 1048576 / (ms / 1000)).toFixed(1);
     const ok = got.status === 200 && got.bytes === it.size && got.sha === it.sha256;
     hashed += 1;
-    // 大对象跑到十几分钟时，日志里必须能看出"现在在第几条"，否则只能看到一个空转的 job
-    console.log(`  [${hashed}/${hashWanted}] ${it.key} http=${got.status} ${((got.bytes || 0) / 1048576).toFixed(1)}MiB ${rate}MiB/s ${ok ? 'sha 一致' : '待比对'}`);
+    // 大对象跑到十几分钟时，日志里必须能看出"现在在第几条、已经取了多少"，否则只能看到一个空转的 job
+    console.log(
+      `  [${hashed}/${hashWanted}] ${it.key} http=${got.status} ${((got.bytes || 0) / 1048576).toFixed(1)}MiB ` +
+        `${(ms / 1000).toFixed(1)}s ${rate}MiB/s ${ok ? 'sha 一致' : got.err ? '异常 ' + got.err : '待比对'}`
+    );
     if (ok) notes.push(`HASH ${it.key} ${got.bytes}B sha256 与 manifest pin 一致`);
-    else fails.push(`HASH ${it.key} http=${got.status} bytes=${got.bytes}/${it.size} sha=${String(got.sha).slice(0, 16)}… 期望 ${String(it.sha256).slice(0, 16)}…`);
+    else fails.push(
+      `HASH ${it.key} http=${got.status} bytes=${got.bytes}/${it.size} sha=${String(got.sha).slice(0, 16)}… ` +
+        `期望 ${String(it.sha256).slice(0, 16)}…${got.err ? ' 原因=' + got.err : ''}`
+    );
   }
 }
 

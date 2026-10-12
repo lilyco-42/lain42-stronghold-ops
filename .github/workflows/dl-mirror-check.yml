@@ -25,6 +25,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: 闸门自己的失败路径要能红（正向 + 黑洞双对照，全程本地）
+        # 这一条是给闸门做的对照：整段回读遇到"连得上、不回包"时必须变成一行 ✗ + 原因，
+        # 而不是抛未捕获异常把 job 炸掉 —— CI run 38234496095 就是后者，日志里连卡在第几条都看不到。
+        run: node scripts/test-dl-mirror-stall.mjs
       - name: 验收 dl.lilyco42.top 的每个键
         env:
           DEEP: ${{ github.event.inputs.deep || '0' }}

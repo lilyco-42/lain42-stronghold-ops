@@ -52,6 +52,20 @@ node scripts/r2-put-from-manifest.mjs --only <id> --stage <本地目录>
 node scripts/pin-csv-assets.mjs
 ```
 
+## 闸门自己的对照（`scripts/test-dl-mirror-stall.mjs`）
+
+CI run 38234496095 第一次跑 `--deep all` 就红了，原因不在数据，而在闸门本身：
+第 19 条（645 MiB 的 gguf）被"总时长 5 分钟"的 `AbortSignal` 掐死，而异常没接住，
+日志只留下一个 `DOMException`，看不出卡在第几条。所以：
+
+- 超时段位：整段回读现在用**停顿超时**（连续 90 s 收不到字节才算链路死）+ 一个很宽的 15 分钟总上限；
+  前面 378 MiB 那条只用 7 秒，说明"大对象"和"会超时"根本无关，用总时长掐它就是在制造假故障。
+- 异常必须变成一行 `✗ … 原因=…`，不许掀掉整个 job。
+- 这条分支有正向 + 反向两个对照，跑在本机 HTTP 服务上、不碰外网，已挂进每日车道的第一步。
+  实测：6/6 PASS；反向那行输出 `http=ABORT bytes=0/161 … 原因=连续 1.5s 没收到字节`。
+  写这条测试时自己还踩过一个坑：用 `spawnSync` 会让本进程的事件循环冻住，HTTP 服务发不出响应，
+  "正向对照"于是也变假红 —— 必须异步 `spawn`。
+
 ## 踩过的两个坑，写在这里防止复发
 
 1. **`cmd && git diff --exit-code file || echo '::warning::…'` 会把死闸门写成绿的**。
