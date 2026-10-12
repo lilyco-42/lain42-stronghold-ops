@@ -1,0 +1,34 @@
+name: dl-mirror 全量整段哈希验收（每月）
+
+# 每天那条车道只查头（状态/长度/类型/Range）——那只能证明"键在、尺寸对"，
+# 不能证明字节没被改写。manifest 带 sha256 的 20 条一共 2.5 GiB，天天整段回读不值得，
+# 所以单独一条月度车道做全量：覆盖面传 all，由 scripts/dl-mirror-expected.json 里有 pin 的条目数决定，
+# 不由这个文件里的常数决定（清单加了新条目，这里不用改）。
+on:
+  schedule:
+    - cron: '37 4 1 * *'
+  workflow_dispatch:
+    inputs:
+      deep:
+        description: '整段哈希的条数：all = 所有带 pin 的条目（默认），数字 = 只取最小的 N 条'
+        required: false
+        default: 'all'
+
+permissions:
+  contents: read
+
+jobs:
+  deep:
+    runs-on: ubuntu-latest
+    # 2.5 GiB 在 GitHub runner 到 R2 这个方向上一般几分钟走完，留 45 分钟是给它兜底而不是让它装死：
+    # 单条请求自己有 5 分钟 AbortSignal，卡住的条目会先失败并把"现在在第几条"打在日志里。
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 逐条整段回读并与 manifest 的 sha256 比对
+        env:
+          DEEP: ${{ github.event.inputs.deep || 'all' }}
+        run: node scripts/check-dl-mirror.mjs --deep "$DEEP"

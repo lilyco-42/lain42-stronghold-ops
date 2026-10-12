@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       deep:
-        description: '额外对最小的 N 条做整段 sha256 校验（0 = 不做）'
+        description: '额外对最小的 N 条做整段 sha256 校验（0 = 不做，all = 所有带 pin 的条目；全量走 dl-mirror-deep.yml）'
         required: false
         default: '0'
 
