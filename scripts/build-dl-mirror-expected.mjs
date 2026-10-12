@@ -1,12 +1,17 @@
-// 生成 dl-mirror 的「期望表」并落到仓库里（CI 不能依赖 _staging 草稿目录，
-// 否则清单一旦清理，这条闸门就变成了没人能复现的断言）。
+// 生成 dl-mirror 的「期望表」并落到仓库里。
 // 期望来源有两个，各自标注 provenance，免得以后把不同强度的断言混为一谈：
-//   manifest：站内下载清单，含 size 与 sha256（强度最高，能验 pin）
-//   csv     ：2026-09-28 那份 OSS 资产清单，含键名与 Content-Type，
-//             size 取我当时上传并回读校验过的本地文件尺寸（强度次一档）
-import { readFileSync, writeFileSync, statSync } from 'node:fs';
+//   manifest：站内下载清单（唯一会变的输入，所以每次重新抓），含 size 与 sha256（强度最高，能验 pin）
+//   csv     ：scripts/dl-mirror-csv-snapshot.json —— 2026-09-28 那份 OSS 清单的**冻结快照**，
+//             含键名、Content-Type 和当年上传并回读校验过的文件尺寸（强度次一档）。
+//             必须是仓库内的快照而不是 D:/Code/_staging 里的草稿：那条路径只有我本机有，
+//             CI 里 readFileSync 直接 ENOENT，而工作流那一步用 `|| echo` 把失败吞成了 success，
+//             于是这道防"我改漏"的闸门其实一次都没跑过。
+import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = fileURLToPath(new URL('.', import.meta.url));
 
 const MIME = {
   '.exe': 'application/vnd.microsoft.portable-executable',
@@ -42,18 +47,9 @@ for (const it of manifest.items) {
   });
 }
 
-const csv = readFileSync('D:/Code/_staging/oss-assets-20260928.csv', 'utf8').replace(/^/, '');
-const localRoot = (p) => p.replaceAll('\\', '/');
-for (const line of csv.trim().split(/\r?\n/).slice(1)) {
-  const m = line.match(/^"([^"]+)","([^"]+)","([^"]+)"$/);
-  if (!m) continue;
-  let size = 0;
-  try {
-    size = statSync(localRoot(m[1])).size;
-  } catch {
-    /* 源文件已被清理：只断言可达与类型 */
-  }
-  rows.push({ key: m[2], size, sha256: null, ct: m[3], src: 'csv', id: m[2] });
+const snap = JSON.parse(readFileSync(here + 'dl-mirror-csv-snapshot.json', 'utf8'));
+for (const r of snap.rows) {
+  rows.push({ key: r.key, size: r.size, sha256: null, ct: r.ct, src: 'csv', id: r.key });
 }
 
 const out = {
@@ -69,7 +65,7 @@ const out = {
   ],
   items: rows,
 };
-writeFileSync('D:/Code/lain42-stronghold-ops/scripts/dl-mirror-expected.json', JSON.stringify(out, null, 2) + '\n', 'utf8');
+writeFileSync(here + 'dl-mirror-expected.json', JSON.stringify(out, null, 2) + '\n', 'utf8');
 console.log(
   `写出 ${rows.length} 条（manifest ${rows.filter((r) => r.src === 'manifest').length}，csv ${rows.filter((r) => r.src === 'csv').length}）；knownGaps=${out.knownGaps.length}`
 );

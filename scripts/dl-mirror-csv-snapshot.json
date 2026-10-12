@@ -1,0 +1,204 @@
+{
+  "note": "2026-09-28 那次从阿里云 OSS 迁走的 33 个 wasm/资源键。size 是当时上传并回读 sha256 校验过的那个本地文件的尺寸。这份是冻结历史，不参与「线上 manifest 是否变了」的判断，所以故意不带时间戳，也不允许被程序重新推导。",
+  "provenance": "由我本机的 _staging 草稿 CSV（会被清理，不作为可复现输入）一次性冻结而来；localPath 只是当时的出处记录，任何脚本都不许再读它。",
+  "rows": [
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/browsercc-index.js",
+      "ct": "application/javascript",
+      "size": 5296,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\browsercc-index.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/browsercc.js",
+      "ct": "application/javascript",
+      "size": 5296,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\browsercc.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/clang.js",
+      "ct": "application/javascript",
+      "size": 74193,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\clang.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/clang.wasm",
+      "ct": "application/wasm",
+      "size": 42553880,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\clang.wasm"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/clingswasm.js",
+      "ct": "application/javascript",
+      "size": 5505,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\clingswasm.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/debug.js",
+      "ct": "application/javascript",
+      "size": 414,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\debug.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/fd.js",
+      "ct": "application/javascript",
+      "size": 1906,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\fd.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/fs_mem.js",
+      "ct": "application/javascript",
+      "size": 12206,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\fs_mem.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/fs_opfs.js",
+      "ct": "application/javascript",
+      "size": 2280,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\fs_opfs.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/index.js",
+      "ct": "application/javascript",
+      "size": 316,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\index.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/lld.js",
+      "ct": "application/javascript",
+      "size": 71604,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\lld.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/lld.wasm",
+      "ct": "application/wasm",
+      "size": 23202572,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\lld.wasm"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/strace.js",
+      "ct": "application/javascript",
+      "size": 318,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\strace.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/sysroot.tar",
+      "ct": "application/x-tar",
+      "size": 28620800,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\sysroot.tar"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/wasi_defs.js",
+      "ct": "application/javascript",
+      "size": 9027,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\wasi_defs.js"
+    },
+    {
+      "key": "wasm/lilyco-clang/e19dc5c/wasi.js",
+      "ct": "application/javascript",
+      "size": 16429,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\lyco\\clang\\wasm\\wasi.js"
+    },
+    {
+      "key": "wasm/lyco-chat/e19dc5c/pkg/lyco_chat_wasm.js",
+      "ct": "application/javascript",
+      "size": 8089,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\tool\\lyco_chat\\pkg\\lyco_chat_wasm.js"
+    },
+    {
+      "key": "wasm/lyco-chat/e19dc5c/pkg/lyco_chat_wasm_bg.wasm",
+      "ct": "application/wasm",
+      "size": 60812,
+      "localPath": "D:\\Code\\lilyco-42.github.io\\tool\\lyco_chat\\pkg\\lyco_chat_wasm_bg.wasm"
+    },
+    {
+      "key": "wasm/highs/1.15.3/build/highs.mjs",
+      "ct": "application/javascript",
+      "size": 168088,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\highs\\package\\build\\highs.mjs"
+    },
+    {
+      "key": "wasm/highs/1.15.3/build/highs.wasm",
+      "ct": "application/wasm",
+      "size": 3531385,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\highs\\package\\build\\highs.wasm"
+    },
+    {
+      "key": "wasm/licenses/highs-1.15.3/LICENSE",
+      "ct": "application/octet-stream",
+      "size": 1090,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\highs\\package\\LICENSE"
+    },
+    {
+      "key": "wasm/magick-wasm/0.0.43/dist/index.js",
+      "ct": "application/javascript",
+      "size": 409198,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\magick\\package\\dist\\index.js"
+    },
+    {
+      "key": "wasm/magick-wasm/0.0.43/dist/x64/magick.wasm",
+      "ct": "application/wasm",
+      "size": 15202085,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\magick\\package\\dist\\x64\\magick.wasm"
+    },
+    {
+      "key": "wasm/licenses/magick-wasm-0.0.43/LICENSE",
+      "ct": "application/octet-stream",
+      "size": 11358,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\magick\\package\\LICENSE"
+    },
+    {
+      "key": "wasm/licenses/magick-wasm-0.0.43/NOTICE",
+      "ct": "application/octet-stream",
+      "size": 220332,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\magick\\package\\NOTICE"
+    },
+    {
+      "key": "wasm/ffmpeg/0.12.10/dist/umd/ffmpeg.js",
+      "ct": "application/javascript",
+      "size": 4126,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\ffmpeg\\package\\dist\\umd\\ffmpeg.js"
+    },
+    {
+      "key": "wasm/ffmpeg/0.12.10/dist/umd/814.ffmpeg.js",
+      "ct": "application/javascript",
+      "size": 2648,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\ffmpeg\\package\\dist\\umd\\814.ffmpeg.js"
+    },
+    {
+      "key": "wasm/ffmpeg-util/0.12.1/dist/umd/index.js",
+      "ct": "application/javascript",
+      "size": 3286,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\ffmpeg-util\\package\\dist\\umd\\index.js"
+    },
+    {
+      "key": "wasm/ffmpeg-core/0.12.6/dist/umd/ffmpeg-core.js",
+      "ct": "application/javascript",
+      "size": 114673,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\ffmpeg-core\\package\\dist\\umd\\ffmpeg-core.js"
+    },
+    {
+      "key": "wasm/ffmpeg-core/0.12.6/dist/umd/ffmpeg-core.wasm",
+      "ct": "application/wasm",
+      "size": 32129114,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\ffmpeg-core\\package\\dist\\umd\\ffmpeg-core.wasm"
+    },
+    {
+      "key": "wasm/rdkit/2026.3.6/dist/RDKit_minimal.js",
+      "ct": "application/javascript",
+      "size": 105843,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\rdkit\\package\\dist\\RDKit_minimal.js"
+    },
+    {
+      "key": "wasm/rdkit/2026.3.6/dist/RDKit_minimal.wasm",
+      "ct": "application/wasm",
+      "size": 7333095,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\rdkit\\package\\dist\\RDKit_minimal.wasm"
+    },
+    {
+      "key": "wasm/opencv/4.13.0/opencv.js",
+      "ct": "application/javascript",
+      "size": 10964323,
+      "localPath": "D:\\Code\\_staging\\oss-packages\\opencv.js"
+    }
+  ]
+}

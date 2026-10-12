@@ -35,4 +35,10 @@ jobs:
             node scripts/check-dl-mirror.mjs
           fi
       - name: 期望表本身要和线上 manifest 对齐（防我改漏）
-        run: node scripts/build-dl-mirror-expected.mjs && git diff --exit-code scripts/dl-mirror-expected.json || echo '::warning::期望表与线上 manifest 已有差异，请复核后提交'
+        # 不要在这一步加 `|| echo '::warning::'`：上一版就是这么写的，脚本因为读不到
+        # _staging 的草稿 CSV 直接 ENOENT，却被吞成 step success —— 一道从没跑过的闸门。
+        # 两个来源都必须非空，否则"清单被线上删空"也会显示成全绿。
+        run: |
+          node scripts/build-dl-mirror-expected.mjs
+          node -e "const t=require('./scripts/dl-mirror-expected.json');const c=(s)=>t.items.filter(i=>i.src===s).length;if(t.items.length<50||c('manifest')<20||c('csv')<30)throw new Error('期望表来源残缺：共 '+t.items.length+'，manifest '+c('manifest')+'，csv '+c('csv'));console.log('PASS 期望表 '+t.items.length+' 条（manifest '+c('manifest')+'，csv '+c('csv')+'，knownGaps '+t.knownGaps.length+'）')"
+          git diff --exit-code -- scripts/dl-mirror-expected.json
