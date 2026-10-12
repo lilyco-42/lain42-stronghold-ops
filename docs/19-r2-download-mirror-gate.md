@@ -11,12 +11,15 @@
 
 | 车道 | 文件 | 频率 | 断言强度 |
 |---|---|---|---|
-| 浅 | `.github/workflows/dl-mirror-check.yml` | 每天 4 次（03:17/09:17/15:17/21:17 UTC） | 每个键：HTTP 200/206、长度==期望、Content-Type、Range 被接受 |
-| 全量 | `.github/workflows/dl-mirror-deep.yml` | 每月 1 日与 15 日 04:37 UTC | 上面全部 **+ 整段回读比 sha256**（≈2.7 GiB） |
+| 浅 | `.github/workflows/dl-mirror-check.yml` | **父车道 `sp-room-api` 每次跑完自动触发**（4 个 cron 槽位只当冗余） | 每个键：HTTP 200/206、长度==期望、Content-Type、Range 被接受 |
+| 全量 | `.github/workflows/dl-mirror-deep.yml` | 每月 1 日与 15 日 04:37 UTC + 手工 dispatch | 上面全部 **+ 整段回读比 sha256**（≈2.7 GiB） |
 
-为什么不是"每天一次/每月一次"：这个账号的 GitHub 定时任务实测会整小时推迟甚至整天不落地
-（见 `codex-reset-reminder` 那边同一天只跑了一次 schedule、另一条 02:22 的 09:26 才跑），
-槽位多几个是把"至少跑成一次"变成大概率，不是保证。
+**浅车道为什么不靠 cron（这一段是纠正我自己上一轮的判断）**：把它从每天一次改成一天四次之后，
+到点的槽位仍然一个 run 都没产生 —— 15:17 UTC 过期 1h19m 时本仓 0 run，提醒器仓 12:23 UTC 的
+槽位同样 0 run。同账号唯一被证明会落地的是 `sp-room-api`（`22 2 * * *`；10-11 09:04Z、
+10-12 09:26Z，各推迟 6–7 小时）。于是浅车道改成 `workflow_run` 挂在它后面，
+并在 2026-10-12 16:41:35Z 实测点火（父 run 完成 18 秒后出现 `event=workflow_run` 且 success）。
+教训：**"加了 schedule"不等于"会被跑"；触发机制要用一次真实点火证明，不能靠文档。**
 
 两条都跑同一个脚本 `scripts/check-dl-mirror.mjs`，期望值来自 `scripts/dl-mirror-expected.json`。
 
