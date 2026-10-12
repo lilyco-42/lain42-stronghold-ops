@@ -59,9 +59,8 @@ const out = {
   base: 'https://dl.lilyco42.top',
   note: 'sha256 只来自下载站 manifest；csv 项当年已逐条上传并回读校验，这里只锁长度与 Content-Type。',
   knownGaps: [
-    { id: 'lyco', why: 'mirror.url 本就指向源站 lain42.top/lyco-dl/…，不是 OSS 对象，无需迁' },
-    { id: 'lyco-jev', why: 'manifest 钉 623029300 B；源站文件自 Oct 3 起是 1155579350 B，pin 那份只在停用的 OSS → 等用户决定' },
-    { id: 'cute-pet', why: 'pin 801aa079… vs GitHub 现资产 0cd6f668…（同尺寸不同字节），重钉还是顶用等用户决定' },
+    { id: 'lyco-jev', why: 'manifest 钉 623029300 B / 3947c93b…；源站现文件 1155579350 B（Oct 3 起），pin 那份只在停用的 OSS。源站 fallback 实测境内 206/30 ms、content-type 正确 → 改链接可用，但换的是另一个 build，等用户决定重钉' },
+    { id: 'cute-pet', why: 'pin 801aa079… vs GitHub 现资产 0cd6f668…（同尺寸不同字节）；源站无 /cute-pet-dl/ 路径（实测 404），所以没有"改链接即可"这条路，只能重钉后上传，等用户决定' },
   ],
   items: rows,
 };
