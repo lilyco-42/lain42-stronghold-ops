@@ -1,0 +1,26 @@
+[Unit]
+Description=EasyTier LAN node (Stronghold virtual LAN, 10.126.126.1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/easytier/env
+ExecStart=/usr/local/bin/easytier-core \
+  --instance-name stronghold-lan \
+  --ipv4 10.126.126.1 \
+  --network-name ${NETWORK_NAME} \
+  --network-secret ${NETWORK_SECRET} \
+  --listeners 11010 \
+  --rpc-portal 127.0.0.1:15888 \
+  --private-mode true \
+  --foreign-relay-bps-limit 262144 \
+  --console-log-level info
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

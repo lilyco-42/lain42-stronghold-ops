@@ -1,0 +1,13 @@
+[Unit]
+Description=Bridge virtual LAN 5150 to game server (127.0.0.1:5150)
+After=easytier-lan.service
+Requires=easytier-lan.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/socat TCP-LISTEN:5150,bind=10.126.126.1,fork,reuseaddr TCP:127.0.0.1:5150
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
