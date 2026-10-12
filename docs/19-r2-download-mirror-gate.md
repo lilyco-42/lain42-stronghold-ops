@@ -11,8 +11,12 @@
 
 | 车道 | 文件 | 频率 | 断言强度 |
 |---|---|---|---|
-| 浅 | `.github/workflows/dl-mirror-check.yml` | 每天 03:17 UTC | 每个键：HTTP 200/206、长度==期望、Content-Type、Range 被接受 |
-| 全量 | `.github/workflows/dl-mirror-deep.yml` | 每月 1 日 04:37 UTC | 上面全部 **+ 整段回读比 sha256**（≈2.6 GiB） |
+| 浅 | `.github/workflows/dl-mirror-check.yml` | 每天 4 次（03:17/09:17/15:17/21:17 UTC） | 每个键：HTTP 200/206、长度==期望、Content-Type、Range 被接受 |
+| 全量 | `.github/workflows/dl-mirror-deep.yml` | 每月 1 日与 15 日 04:37 UTC | 上面全部 **+ 整段回读比 sha256**（≈2.7 GiB） |
+
+为什么不是"每天一次/每月一次"：这个账号的 GitHub 定时任务实测会整小时推迟甚至整天不落地
+（见 `codex-reset-reminder` 那边同一天只跑了一次 schedule、另一条 02:22 的 09:26 才跑），
+槽位多几个是把"至少跑成一次"变成大概率，不是保证。
 
 两条都跑同一个脚本 `scripts/check-dl-mirror.mjs`，期望值来自 `scripts/dl-mirror-expected.json`。
 

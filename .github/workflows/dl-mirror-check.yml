@@ -5,7 +5,10 @@ name: dl-mirror 公开下载键持续验收
 # 浅模式只查头（状态/长度/Content-Type/Range），deep 模式额外整段流式回读比 manifest 的 sha256。
 on:
   schedule:
-    - cron: '17 3 * * *'
+    # 一天四次而不是每天一次：这个账号的 GitHub schedule 实测会整小时推迟甚至漏掉
+    # （同账号另一仓库 02:22 的 cron 09:26 才落地；提醒器仓那条 event=schedule 全历史只落地 1 次）。
+    # 这条车道是唯一能发现"某个键被删了/类型变了"的自动机制，一天一次常常等于没有。
+    - cron: '17 3,9,15,21 * * *'
   workflow_dispatch:
     inputs:
       deep:

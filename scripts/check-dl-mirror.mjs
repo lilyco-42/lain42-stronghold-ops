@@ -3,7 +3,7 @@
 // 为什么要有这条：迁移当时是我一条条手工验的，做完就没人再管；
 // 而站外链接一旦切过去，坏一个键就是用户 404。所以把断言固化进 CI。
 //
-//   node scripts/check-dl-mirror.mjs            # 只查头（状态/长度/类型/Range），CI 每天跑
+//   node scripts/check-dl-mirror.mjs            # 只查头（状态/长度/类型/Range），CI 一天四次跑
 //   node scripts/check-dl-mirror.mjs --deep 3   # 额外把最小的 3 条整段流式下载算 sha256
 //   node scripts/check-dl-mirror.mjs --deep all # 所有带 manifest pin 的条目都整段哈希（每月一次，2.5 GiB 量级）
 //
