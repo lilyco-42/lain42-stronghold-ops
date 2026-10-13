@@ -1,5 +1,5 @@
 {
-  "note": "manifest 与 csv 两张表都覆盖不到的键：站内代码拼出来的路径（不在下载清单里，也不在当年那份 csv 里）。\n这一类补一份钉一份，来源写清楚，否则它和\"手工清单\"一样会烂。",
+  "note": "manifest 与 csv 两张表都覆盖不到的键：站内代码拼出来的路径（不在下载清单里，也不在当年那份 csv 里）。这一类补一份就钉一份，来源写清楚，否则它和手工清单一样会烂。",
   "rows": [
     {
       "key": "wasm/wllama/3.6.1/compat/wllama.js",
@@ -7,7 +7,7 @@
       "sha256": "97f88f7bf26b17ead6be6e7c0c39d20e21661e71827eb5e3c9a468667fc249f5",
       "ct": "application/javascript",
       "src": "npm:@wllama/wllama-compat@3.6.1/wasm/wllama.js",
-      "why": "Safari/Firefox 兼容内核；tool/lyco_chat/index.html:119 setCompat({worker}) 用它。3.6.1 的 index.min.js 里 WasmCompatFromCDN 指向的正是这个包的这个路径，所以这不是自造产物，是把上游那两份文件搬到自己的桶上（不依赖 jsdelivr 的境内可达性）。"
+      "why": "Safari/Firefox 兼容内核；tool/lyco_chat/index.html:119 的 setCompat({worker}) 用它。3.6.1 的 index.min.js 里 WasmCompatFromCDN 指向的正是这个包的这个路径，所以这不是自造产物，是把上游那两份文件搬到自己的桶上（不依赖 jsdelivr 的境内可达性）。"
     },
     {
       "key": "wasm/wllama/3.6.1/compat/wllama.wasm",
@@ -15,7 +15,47 @@
       "sha256": "3c447fe82f5376b1202f909a414348421fe196ae069e1504010f55c0454f85f4",
       "ct": "application/wasm",
       "src": "npm:@wllama/wllama-compat@3.6.1/wasm/wllama.wasm",
-      "why": "上一条的 wasm。2026-10-13 从 jsdelivr 与 unpkg 各拉一次，两份 sha256 相同且与桶里回读的那份相同；本机→桶、境内→桶也都逐字节一致。"
+      "why": "上一条的 wasm。2026-10-13 从 jsdelivr 与 unpkg 各拉一次，两份 sha256 相同，且与上传后从公网域名回读的那份相同。"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/transformers.bundle.mjs",
+      "size": 870563,
+      "sha256": "094392fcacda6cacb6cef5ca7dbcde33ffbc8227423add3fcf0719a4d5e3e90f",
+      "ct": "text/javascript",
+      "src": "rebuild:Pages tool/models/build-runtime.mjs @ run 38346395050",
+      "why": "tool/models 的运行时入口。这是按 Pages 仓自带脚本重建的产物（npm ci + esbuild，@huggingface/transformers 3.8.1），不是 OSS 时代那份字节 —— 那份没留哈希也取不回来了。所以这条钉的是【lane 产物 == 桶里的对象】，引用它时别说成还原。构建车道还断言了产物里不含旧域名。"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.mjs",
+      "size": 20856,
+      "sha256": "43c25054b6b9ac000f786c65545ff83a45f871e0e310e8c2f4d48a363bb66db4",
+      "ct": "text/javascript",
+      "src": "rebuild:Pages tool/models/build-runtime.mjs @ run 38346395050",
+      "why": "bundle 外部的 ort 胶水：build-runtime.mjs 用 external:['*.wasm'] 并把 onnxruntime-web/dist 的文件拷进同一目录。app.mjs:130 把 wasmPaths 指到 bundle 同目录，少一个就是【运行时加载成功、推理时 404】。"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.wasm",
+      "size": 11133407,
+      "sha256": "f061472c6e77d6d50d079aacdc0ff9b63fee287ddd2cbf46cf62438d3891de2b",
+      "ct": "application/wasm",
+      "src": "rebuild:Pages tool/models/build-runtime.mjs @ run 38346395050",
+      "why": "上一条的 wasm，11.1 MB。"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.jsep.mjs",
+      "size": 44484,
+      "sha256": "08fb86ec433c78bfb032c5d84a68b8e8e5a8d81268fa39e24314179a5767a5b9",
+      "ct": "text/javascript",
+      "src": "rebuild:Pages tool/models/build-runtime.mjs @ run 38346395050",
+      "why": "jsep（WebGPU 那一路）的胶水。页面目前 device 走 wasm 用不到它，但 build-runtime.mjs 一并产出、放在同目录，缺了它这条车道的产物清单就不齐。"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.jsep.wasm",
+      "size": 21596019,
+      "sha256": "c46655e8a94afc45338d4cb2b840475f88e5012d524509916e505079c00bfa39",
+      "ct": "application/wasm",
+      "src": "rebuild:Pages tool/models/build-runtime.mjs @ run 38346395050",
+      "why": "上一条的 wasm，21.6 MB —— 全量哈希那条车道（--deep all）因此会多读约 33 MB。"
     }
   ]
 }

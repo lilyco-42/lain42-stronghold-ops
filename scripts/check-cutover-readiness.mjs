@@ -40,9 +40,14 @@ const CONCAT_KEYS = [
 //     我上一轮"上游没有 compat 产物，只能从源码构建"是假阴性（搜的是 wllama 包，没搜 @wllama/wllama-compat）。
 //     现在桶里那份与 jsdelivr/unpkg 两次独立拉取逐字节一致，并已进 dl-mirror 期望表（src=extra，带 sha256）。
 // 闸门语义不变：多一条新缺口 → 红；钉着的任何一条被补齐 → 也红并要求删条目。
+//
+// wasm/transformers-js/3.8.1/transformers.bundle.mjs 于 2026-10-13 补齐并移出清单：
+//   生产者就是 Pages 仓自带的 tool/models/build-runtime.mjs，车道 build-hf-runtime.yml 跑它
+//   （run 38346395050：bundle 870,563 B / 094392fc…，外加 app.mjs:130 需要的 4 个 ort 文件，
+//   合计约 33.6 MB），产物已 --remote 灌进桶并从公网回读哈希一致。
+//   注意强度：这是**按 lock 重建**的产物，钉住它只证明"lane 产物==桶里的对象"，不证明等于 OSS 原字节。
 const EXPECTED_MISSING = [
   'models/hf/catalog.json',
-  'wasm/transformers-js/3.8.1/transformers.bundle.mjs',
 ];
 const CONTROL = 'lyco-dl/lyco-windows.zip';
 

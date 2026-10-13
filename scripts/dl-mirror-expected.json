@@ -463,6 +463,46 @@
       "ct": "application/wasm",
       "src": "extra",
       "id": "wasm/wllama/3.6.1/compat/wllama.wasm"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/transformers.bundle.mjs",
+      "size": 870563,
+      "sha256": "094392fcacda6cacb6cef5ca7dbcde33ffbc8227423add3fcf0719a4d5e3e90f",
+      "ct": "text/javascript",
+      "src": "extra",
+      "id": "wasm/transformers-js/3.8.1/transformers.bundle.mjs"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.mjs",
+      "size": 20856,
+      "sha256": "43c25054b6b9ac000f786c65545ff83a45f871e0e310e8c2f4d48a363bb66db4",
+      "ct": "text/javascript",
+      "src": "extra",
+      "id": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.mjs"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.wasm",
+      "size": 11133407,
+      "sha256": "f061472c6e77d6d50d079aacdc0ff9b63fee287ddd2cbf46cf62438d3891de2b",
+      "ct": "application/wasm",
+      "src": "extra",
+      "id": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.wasm"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.jsep.mjs",
+      "size": 44484,
+      "sha256": "08fb86ec433c78bfb032c5d84a68b8e8e5a8d81268fa39e24314179a5767a5b9",
+      "ct": "text/javascript",
+      "src": "extra",
+      "id": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.jsep.mjs"
+    },
+    {
+      "key": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.jsep.wasm",
+      "size": 21596019,
+      "sha256": "c46655e8a94afc45338d4cb2b840475f88e5012d524509916e505079c00bfa39",
+      "ct": "application/wasm",
+      "src": "extra",
+      "id": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.jsep.wasm"
     }
   ]
 }

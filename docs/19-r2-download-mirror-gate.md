@@ -7,12 +7,13 @@
 **搬迁本身做完不等于交付完**：键一旦切过去，坏一个就是用户侧 404，而没人会天天手工点。
 这一篇讲的是"谁来天天验"，不是"怎么搬的"（搬运过程在 16/17 里）。
 
-## 两条车道
+## 车道（验收两条 + 构建一条）
 
 | 车道 | 文件 | 频率 | 断言强度 |
 |---|---|---|---|
 | 浅 | `.github/workflows/dl-mirror-check.yml` | **父车道 `sp-room-api` 每次跑完自动触发**（4 个 cron 槽位只当冗余） | 每个键：HTTP 200/206、长度==期望、Content-Type、Range 被接受 |
 | 全量 | `.github/workflows/dl-mirror-deep.yml` | cron 每月 1/15 日 04:37 UTC **+ 被父车道带起来时的日历守卫**（只有 1/15 日真跑）+ 手工 dispatch | 上面全部 **+ 整段回读比 sha256**（2.7 GiB，实测约 1 分钟走完） |
+| 构建 | `.github/workflows/build-hf-runtime.yml` | 只有手工 dispatch（不排程：它产的是二进制产物，不是验收） | 只读 checkout Pages 仓，跑它自带的 `tool/models/build-runtime.mjs`，产物齐 + 不含旧域名才出 artifact；产物哈希随后进 `dl-mirror-extra-pinned.json`，验收仍归上面两条 |
 
 **浅车道为什么要三个触发源（这段是我修正过的判断，不是最初的版本）**：我最初测到"改了排程后
 到点槽位 0 run"就下结论说 cron 在这个账号上不落地 —— 那个结论测得太早，后来被证伪：
@@ -37,7 +38,7 @@
   `新出现的拼接键` 并 rc=1。**这条也有过一段假绿历史**：第一版正则把变量前缀写成必须有一个前置字符，
   于是裸名 `OSS` 一条都匹配不到，只报"代码里 1 条"——看着通过其实是空转。
   变异验证（现版）：从 `CONCAT_KEYS` 删掉 `compat/wllama.js` → 输出"代码里新出现的拼接键 …"且 rc=1。
-- 已知缺口现在剩 **2 条**钉在 `EXPECTED_MISSING`：多一条新缺口 → 红；**已知缺口被补齐 → 也红**并要求删条目，
+- 已知缺口现在剩 **1 条**（`models/hf/catalog.json`）钉在 `EXPECTED_MISSING`：多一条新缺口 → 红；**已知缺口被补齐 → 也红**并要求删条目，
   缺口清单就不会悄悄过期。因此它今天绿，不需要 `|| echo` 那种把死闸门写成绿的写法。
   两个方向都做过变异验证：塞一条不存在的键 → `NEW-MISS` rc=1；把一条可达的塞进清单 → 要求删条目 rc=1。
 - **缺口的性质在 2026-10-13 纠正过一次：不是"切流会弄坏"，是"已经坏了"。** 旧域名 `dl.lain42.top` 对它们全部回
@@ -54,6 +55,13 @@
   **`wrangler r2 object put` 不带 `--remote` 会写进 `.wrangler/state/` 本地模拟并照样打印 "Upload complete"** ——
   第一次就是这么"成功"的，域名仍 404；判别方法：`r2 object get` 同一个键能拿回字节但拿不到桶里早就存在的键，
   就是读到本地了。这条已经吃掉过一次"迁移完成"的假结论。
+- **`transformers.bundle.mjs` 也补齐了（2026-10-13），这条是"重建"不是"还原"**：生产者不用另找 —— Pages 仓
+  `tool/models/build-runtime.mjs` 就是当年产它的脚本，`.github/workflows/build-hf-runtime.yml` 只读 checkout Pages
+  跑它（本机一律不编译）。一次出五件：bundle 870,563 B / `094392fc…`，加 `app.mjs:130` 把
+  `env.backends.onnx.wasm.wasmPaths` 指到 bundle 同目录所要求的 4 个 ort 文件（共约 33.6 MB）。
+  五件的哈希都进 `scripts/dl-mirror-extra-pinned.json`，所以浅车道从 56 键涨到 **61 键**。
+  强度边界写在这里：旧域名那份没留哈希、也取不回来，这条钉的是「lane 产物 == 桶里的对象」，
+  引用时不能说成与 OSS 时代字节一致；OSS 那份是否与此不同，无法验证。
 - **桶 CORS 已于 2026-10-13 配上**（`deploy/r2-dl-cors.json`，重建：
   `npx wrangler r2 bucket cors set lain42-dl --file deploy/r2-dl-cors.json -y`，读回 `... cors list lain42-dl`）。
   在服务器（干净出口，本机走代理只会拿到 `200 Connection established`）实测三条：
