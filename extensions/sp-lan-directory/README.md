@@ -63,6 +63,10 @@ ssh root@sp.lain42.top 'cd /tmp/sp-lan-directory && python3 patch-pingap.py --ap
 ```
 
 - `install.sh` 跑 `node --test` 与 `node --check` 才装（**不过就不装**）。
+- **改了 `directory.mjs` 只要重跑 `install.sh --install` 就生效** —— 它以 `systemctl restart`
+  收尾（对未运行=启动、对已运行=重启）。⚠️ 别用 `systemctl enable --now` 代替：对已在运行的
+  unit 那是 no-op，新文件拷进去了、**跑的还是旧代码**。装完可用
+  `journalctl -u sp-lan-directory -n 5` 看启动行里的 `game ports ...` 核对。
 - pingap 是 `--autoreload` 启动的，改完**不用重启**，约 20 秒内自动生效
   （实测：apply 后 404，等 10 秒变 200）。
 - 卸载：`install.sh --uninstall`；pingap 侧回滚用 `/etc/pingap.toml.sp-lan-backup`。

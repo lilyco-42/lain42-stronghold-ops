@@ -420,14 +420,25 @@ scp -i ~/.ssh/lain42.pem \
   extensions/sp-lan-directory/install.sh \
   root@lain42.top:/tmp/sp-lan-dir-deploy/
 
-# 2) 装（install.sh 自己会跑 node --test，测试不过就拒绝安装；随后重写单元并 enable --now）
+# 2) 装（install.sh 自己会跑 node --test，测试不过就拒绝安装；随后重写单元并 **restart** 单元）
 ssh -i ~/.ssh/lain42.pem root@lain42.top \
   'bash /tmp/sp-lan-dir-deploy/install.sh --install && rm -rf /tmp/sp-lan-dir-deploy'
 
-# 3) 验收：network 里应出现 ports:[5150,3000]，且官方服仍在
+# 3) 旁证（**先看这条**）：启动日志里会打印**实际生效的端口列表**
+ssh -i ~/.ssh/lain42.pem root@lain42.top 'journalctl -u sp-lan-directory -n 5 --no-pager'
+#    期望看到：... listening on http://127.0.0.1:5188 (cidr 10.126.126.0/24, game ports 5150,3000)
+#    ⚠️ 若打印的是 "game ports 5150"（没有 3000）→ 跑的还是旧代码，**新文件没被加载**。
+
+# 4) 验收：network 里应出现 ports:[5150,3000]，且官方服仍在
 curl -s https://sp.lain42.top/api/lan/v1/rooms \
   | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['network']);print([r['virtualIp']+':'+str(r['port']) for r in d['rooms']])"
 ```
+
+> ⚠️ **一个踩过的坑（已修 `install.sh`）**：`install.sh --install` 原先是 `systemctl enable --now`。
+> 对一个**已在运行**的 unit，`enable --now` 是 **no-op —— 不会重启**，于是新的 `directory.mjs`
+> 被拷进 `/opt/sp-lan-directory/`、**但内存里跑的还是旧代码**：第 4 步会看不到 `ports`，
+> 看上去像"修复本身没生效"。现在改成 `enable` + **`restart`**（对未运行=启动、对已运行=重启）。
+> 第 3 步的启动日志就是为这件事准备的**旁证**。回滚那条本来就有 `systemctl restart`，现在两侧对称了。
 
 **为什么可以重启它**：`sp-lan-directory` 是 §8/§10 里那个**只读目录服务**，
 不碰游戏服、不碰 pingap、不碰游戏仓；重启它**不会丢任何对局**（红线针对的是 `stronghold`）。

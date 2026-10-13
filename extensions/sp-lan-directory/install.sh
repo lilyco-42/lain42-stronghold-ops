@@ -85,8 +85,14 @@ WantedBy=multi-user.target
 UNITCONF
 chmod 644 "$UNIT"
 systemctl daemon-reload
-systemctl enable --now sp-lan-directory.service
+systemctl enable sp-lan-directory.service
+# restart, NOT `enable --now`: on an already-active unit `--now` is a no-op, so re-installing
+# to ship a new directory.mjs would copy the file into $DEST and leave the OLD process running
+# (the acceptance check then sees stale JSON and looks like the fix itself is broken).
+# `restart` starts it when down and reloads it when up, which is what both cases want.
+systemctl restart sp-lan-directory.service
 sleep 2
 systemctl is-active sp-lan-directory.service
 echo "INSTALLED: $DEST, unit $UNIT (listening 127.0.0.1:5188)"
+echo "Startup line in 'journalctl -u sp-lan-directory -n 5' prints the live game-port list."
 echo "Next: expose it with patch-pingap.py --apply, then verify https://sp.lain42.top/api/lan/v1/rooms"
