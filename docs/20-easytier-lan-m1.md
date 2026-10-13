@@ -240,8 +240,10 @@ apt-get remove -y socat && rm -rf /etc/easytier /usr/local/bin/easytier-*
 1. ~~**安全组不放行则全盘不成立**（§4）~~ —— **已放行**，2026-10-13 外部带对照组实测（§4）。
 2. 网络密码随分享链接分发 = 谁拿到谁进网。可接受（等同房间密码），
    要更严可用 `--secure-mode` + `--credential` 临时凭据，但那是 per-player 管理，M1 不做。
-3. UDP 打洞在校园网/运营商 NAT 下的成功率未实测（本机 Clash TUN 会干扰，测了也不算）。
-   上线后以 `easytier-cli peer` 的 `tunnel_proto`/`cost` 列为观测点，实在差再开 TCP 兜底。
+3. ~~UDP 打洞在校园网/运营商 NAT 下的成功率未实测~~ —— **已实测（2026-10-13，见 §11）**：
+   从一台**家用宽带 + Clash TUN**（`UDP Stun Type = PortRestricted`）的 Windows 机器加入，
+   `easytier-cli peer` 显示 **`cost=p2p`、`tunnel=tcp,udp`、`lat≈13 ms`、`loss=0.0%`** ——
+   即 **UDP 打洞成功、且是直连不是中继**。仍以 `tunnel_proto` / `cost` 列为长期观测点。
 4. `--foreign-relay-bps-limit 262144` 是按「出口剩 ~1 Mbps」拍的，接入量上来后要重估。
 
 ---
@@ -286,15 +288,16 @@ apt-get remove -y socat && rm -rf /etc/easytier /usr/local/bin/easytier-*
 | `SP_LAN_*` secrets 未配 | ✅ 已配（2026-10-13） |
 | 客户端未重切 | ✅ 已发 **`v0.2.5-c43`** |
 
-⚠️ 唯一遗留的**未验证项**：**UDP `11010` 打洞成功率**（§9.3）与
-**Windows 真机全流程**（装 → 点「开启联机」→ 列表里出现别人的服）—— 都要人来跑。
+⚠️ 唯一遗留的**未验证项**：**Windows 真机全流程**（装 → 点「开启联机」→ 列表里出现别人的服）。
+数据面本身**已在 2026-10-13 端到端实测通过**（§11）—— 剩下的只是客户端 UI 那一层
+（点按钮 → 拉 sidecar → 显示状态），而它要**管理员权限**建 TUN 网卡，只能由人跑。
 
 ### 推进顺序（只剩两步）
 
 1. ~~放行安全组~~ ✅　2. ~~配 secrets~~ ✅　3. ~~重切客户端~~ ✅（`v0.2.5-c43`）
 4. **Windows 真机全流程验证**（装 → 点「开启联机」→ 房间里出现别人的服）。
    ⚠️ 首次点会要**管理员权限**（建 TUN 网卡）；客户端会把失败原因显示在卡片上，不静默。
-5. 观察 `easytier-cli peer` 的 `tunnel_proto` / `cost`，确认 UDP 打洞是否真通（§9.3）。
+5. 长期观察 `easytier-cli peer` 的 `tunnel` / `cost` 列，确认不同 NAT 下的打洞成功率（§9.3 / §11）。
 
 ### 另一条独立的路（已写进玩家 Release）
 
@@ -306,3 +309,82 @@ apt-get remove -y socat && rm -rf /etc/easytier /usr/local/bin/easytier-*
 `ws://`/`wss://` 双探针（客户端仓 `shell/picker-core.js`）；自建服默认 `PORT 3000` +
 `HOST '::'`（`server/index.js` 顶部注释）—— 注意我们线上是 `PORT=5150`/`HOST=127.0.0.1`
 的环境变量覆盖，别把线上的值当默认值写进给玩家的说明。
+
+---
+
+## 11. 端到端数据面实测（2026-10-13，**已通过**）
+
+§10 说"客户端 UI 那层要人跑"是对的，但**数据面本身不需要客户端**就能验 ——
+用 EasyTier 自带的"不建 TUN + 端口转发"模式，在一台**外部机器**上把整条链路走一遍。
+本节记录方法与结果，**下次回归直接抄**。
+
+### 结论（一句话）
+
+一台**家用宽带 + Clash TUN** 的 Windows 机器，用**出厂客户端内嵌的同一套凭据**，
+成功加入 `stronghold-lan`、与服务器建立**直连 P2P**（`cost=p2p`、`lat≈13 ms`、`loss=0.0%`、
+`tunnel=tcp,udp`），并经虚拟 IP 摸到游戏服：`http://10.126.126.1:5150/healthz` → **200**。
+
+### 逐步方法
+
+```bash
+# 1) 取二进制（与 CI 同一个镜像；sha256 应与 build-tauri 日志里的
+#    27af91e270e554709b048bd32327fefd2dfce5062ae1e8701af7550c6f525f84 逐字相同）
+curl -fL -o et.zip \
+  'https://gh.dev.438250.xyz/https://github.com/EasyTier/EasyTier/releases/download/v2.6.4/easytier-windows-x86_64-v2.6.4.zip'
+unzip -q et.zip && cd easytier-windows-x86_64
+
+# 2) 凭据走**环境变量**（不是 argv —— argv 里 ps 可见；出厂客户端则是走 `-c` 文件）
+#    服务器上是 /etc/easytier/env 的 NETWORK_NAME / NETWORK_SECRET，映射成 ET_ 前缀
+set -a; . ./etenv; set +a
+
+# 3) 起探测节点：dhcp 拿虚拟 IP、no-tun 不建网卡（→ 不需要管理员）、
+#    把本地 15150 转发到虚拟网络里的游戏服
+./easytier-core.exe -p tcp://sp.lain42.top:11010 udp://sp.lain42.top:11010 \
+  --dhcp true --no-tun true --no-listener \
+  --instance-name sh-probe --rpc-portal 127.0.0.1:15899 \
+  --port-forward tcp://127.0.0.1:15150/10.126.126.1:5150
+
+# 4) 另一终端：看对端与路由
+./easytier-cli.exe -p 127.0.0.1:15899 peer    # 期望 cost=p2p、tunnel=tcp,udp、loss=0.0%
+./easytier-cli.exe -p 127.0.0.1:15899 node    # 期望 Virtual IP = 10.126.126.x/24
+./easytier-cli.exe -p 127.0.0.1:15899 route   # 期望 10.126.126.1/24 → DIRECT
+
+# 5) 决定性一步
+curl -sS http://127.0.0.1:15150/healthz
+# → {"ok":true,"app":"0.2.5","build":"7033fb63e556","humans":84,"rooms":54,...}
+```
+
+### 实测数值
+
+| 项 | 观测值 |
+|---|---|
+| 本机 NAT | `UDP Stun Type = PortRestricted`（家用宽带 + Clash TUN 在跑） |
+| 对端 | `10.126.126.1/24  Lain42  cost=p2p  lat=13.83 ms  loss=0.0%  tunnel=tcp,udp` |
+| 路由 | `10.126.126.1/24 → next_hop=DIRECT, path_len=1, latency=11.7 ms` |
+| 本机虚拟 IP | `10.126.126.2/24`（DHCP 分配） |
+| 游戏服 healthz | **HTTP 200**，`{"app":"0.2.5","build":"7033fb63e556",...}` |
+| 目录服务 | 探测期间 `peers: 2`，多出 `10.126.126.2  reachable=false  joinable=false` |
+
+最后一行是**「玩家自己开服 → 别人在列表里看到」的活体验证**：目录正确地把新节点认了出来，
+并因为那台机器上**没有跑游戏服**而标成 `joinable=false`（不是"没认到"）。
+
+### ⚠️ 踩到的坑：`--no-tun` 下**不给虚拟 IP**，端口转发会"注册成功但一个字节都不流"
+
+第一次用 `--no-tun true` 且**不写 `--dhcp` / `-i`** 跑，`easytier-cli port-forward` 明明显示
+`Tcp 127.0.0.1:15150 → 10.126.126.1:5150`，`netstat` 也显示在监听，但 `curl` **必然 10 s 超时、0 字节**。
+原因：`easytier-cli node` 的 **`Virtual IP` 是空的** —— 没有虚拟身份，转发的包回不来。
+加上 `--dhcp true`（或 `-i 10.126.126.x`）拿到虚拟 IP 后**立刻 200**。
+→ **排查这类"隧道通了但业务不通"时，第一眼看 `node` 的 Virtual IP，不要先怀疑 NAT 或对端。**
+
+### 两条安全提示（都实测过）
+
+1. **`easytier-core` 会在 INFO 级日志里把 `network_secret` 明文打出来**（启动时的 TOML dump）。
+   出厂客户端的 `redact()`（Electron `desktop/lan.mjs` / Tauri `lan.rs`）**不是装饰，是承重墙** ——
+   抹掉子进程输出这件事不能"优化"掉。
+2. 因此**排查时不要把节点日志原样贴出去**；本次探测的凭据文件与日志已在本机删除。
+
+### 仍然只能由人做的部分
+
+客户端 UI 那层：点「开启联机」→ 拉 sidecar → 状态卡片。它要**管理员权限**建 Wintun 网卡
+（`--no-tun` 那条路走不通 UI，因为客户端就是要那个网卡来让**浏览器**按虚拟 IP 访问）。
+本次实测恰好证明了：**除了建网卡这一步，其余全都不需要管理员**。
