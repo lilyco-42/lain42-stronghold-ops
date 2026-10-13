@@ -37,14 +37,23 @@
   `新出现的拼接键` 并 rc=1。**这条也有过一段假绿历史**：第一版正则把变量前缀写成必须有一个前置字符，
   于是裸名 `OSS` 一条都匹配不到，只报"代码里 1 条"——看着通过其实是空转。
   变异验证（现版）：从 `CONCAT_KEYS` 删掉 `compat/wllama.js` → 输出"代码里新出现的拼接键 …"且 rc=1。
-- 当前 4 条已知缺口钉在 `EXPECTED_MISSING`：多一条新缺口 → 红；**已知缺口被补齐 → 也红**并要求删条目，
+- 已知缺口现在剩 **2 条**钉在 `EXPECTED_MISSING`：多一条新缺口 → 红；**已知缺口被补齐 → 也红**并要求删条目，
   缺口清单就不会悄悄过期。因此它今天绿，不需要 `|| echo` 那种把死闸门写成绿的写法。
   两个方向都做过变异验证：塞一条不存在的键 → `NEW-MISS` rc=1；把一条可达的塞进清单 → 要求删条目 rc=1。
-- **这 4 条的性质今天纠正了一次：不是"切流会弄坏"，是"已经坏了"。** 旧域名 `dl.lain42.top` 对这四条全部回
-  403（OSS 停用），新桶回 404，所以 `tool/models` 与 `tool/lyco_chat` 两页现在就是坏的，补齐它们属于**修复**。
+- **缺口的性质在 2026-10-13 纠正过一次：不是"切流会弄坏"，是"已经坏了"。** 旧域名 `dl.lain42.top` 对它们全部回
+  403（OSS 停用），新桶回 404，所以 `tool/models` 与 `tool/lyco_chat` 两页当时就是坏的，补齐它们属于**修复**。
   而且 `tool/models/app.mjs:76` 是用 `fetch(catalog.json, {mode:'cors'})` 跨源取目录，
-  桶没配 CORS 时 R2 自定义域名不回任何 `access-control-*` 头 —— **桶 CORS 因此是这一页恢复的硬前置，不是可选优化**；
-  `compat/wllama.{js,wasm}` 上游没有，只能从 `ngxson/wllama` 源码构建（构建走 lane，不在本机编译）。
+  桶没配 CORS 时 R2 自定义域名不回任何 `access-control-*` 头 —— **桶 CORS 因此是这一页恢复的硬前置，不是可选优化**。
+- **`compat/wllama.{js,wasm}` 已补齐并从缺口清单删掉（2026-10-13）**。之前记的"上游没有 compat 产物、只能从
+  `ngxson/wllama` 源码构建"是**假阴性**：我搜的是 `wllama` 包，而桶里那份 3.6.1 运行时的 `index.min.js` 自己写着
+  `WasmCompatFromCDN = {worker:"https://cdn.jsdelivr.net/npm/@wllama/wllama-compat@3.6.1/wasm/wllama.js", …}` ——
+  上游包是 scoped 的 `@wllama/wllama-compat`，`wasm/wllama.js` + `wasm/wllama.wasm` 就是站内那两个键，直接搬即可。
+  验收：jsdelivr 与 unpkg 各拉一次，两份 sha256 相同（js `97f88f7b…`/170,982 B，wasm `3c447fe8…`/15,369,538 B），
+  上传后从公网域名字节回读再哈希，与上游一致；两条已进期望表（`src=extra`，来自
+  `scripts/dl-mirror-extra-pinned.json`），所以从此每天验哈希而不只是长度。
+  **`wrangler r2 object put` 不带 `--remote` 会写进 `.wrangler/state/` 本地模拟并照样打印 "Upload complete"** ——
+  第一次就是这么"成功"的，域名仍 404；判别方法：`r2 object get` 同一个键能拿回字节但拿不到桶里早就存在的键，
+  就是读到本地了。这条已经吃掉过一次"迁移完成"的假结论。
 - **桶 CORS 已于 2026-10-13 配上**（`deploy/r2-dl-cors.json`，重建：
   `npx wrangler r2 bucket cors set lain42-dl --file deploy/r2-dl-cors.json -y`，读回 `... cors list lain42-dl`）。
   在服务器（干净出口，本机走代理只会拿到 `200 Connection established`）实测三条：

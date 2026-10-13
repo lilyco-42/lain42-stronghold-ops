@@ -1,0 +1,21 @@
+{
+  "note": "manifest 与 csv 两张表都覆盖不到的键：站内代码拼出来的路径（不在下载清单里，也不在当年那份 csv 里）。\n这一类补一份钉一份，来源写清楚，否则它和\"手工清单\"一样会烂。",
+  "rows": [
+    {
+      "key": "wasm/wllama/3.6.1/compat/wllama.js",
+      "size": 170982,
+      "sha256": "97f88f7bf26b17ead6be6e7c0c39d20e21661e71827eb5e3c9a468667fc249f5",
+      "ct": "application/javascript",
+      "src": "npm:@wllama/wllama-compat@3.6.1/wasm/wllama.js",
+      "why": "Safari/Firefox 兼容内核；tool/lyco_chat/index.html:119 setCompat({worker}) 用它。3.6.1 的 index.min.js 里 WasmCompatFromCDN 指向的正是这个包的这个路径，所以这不是自造产物，是把上游那两份文件搬到自己的桶上（不依赖 jsdelivr 的境内可达性）。"
+    },
+    {
+      "key": "wasm/wllama/3.6.1/compat/wllama.wasm",
+      "size": 15369538,
+      "sha256": "3c447fe82f5376b1202f909a414348421fe196ae069e1504010f55c0454f85f4",
+      "ct": "application/wasm",
+      "src": "npm:@wllama/wllama-compat@3.6.1/wasm/wllama.wasm",
+      "why": "上一条的 wasm。2026-10-13 从 jsdelivr 与 unpkg 各拉一次，两份 sha256 相同且与桶里回读的那份相同；本机→桶、境内→桶也都逐字节一致。"
+    }
+  ]
+}

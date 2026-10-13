@@ -61,6 +61,14 @@ for (const r of snap.rows) {
   rows.push({ key: r.key, size: r.size, sha256: csvSha.get(r.key) ?? null, ct: r.ct, src: 'csv', id: r.key });
 }
 
+// 第三类：manifest 与 csv 都覆盖不到、但站内代码确实引用的键（wllama compat 那两个）。
+// 这类必须"补一个就钉一个"，否则新入库的对象只剩长度与类型，内容坏了没人知道。
+if (existsSync(here + 'dl-mirror-extra-pinned.json')) {
+  for (const r of JSON.parse(readFileSync(here + 'dl-mirror-extra-pinned.json', 'utf8')).rows) {
+    rows.push({ key: r.key, size: r.size, sha256: r.sha256, ct: r.ct, src: 'extra', id: r.key });
+  }
+}
+
 const out = {
   // 故意不写 generatedAt / 时间戳：CI 里要拿「重新生成后的文件 vs 已提交的文件」做 diff
   // 来判断期望表是否落后于线上 manifest。带时间戳会让它每次都不同 → 闸门永远报警，
@@ -69,7 +77,8 @@ const out = {
   note:
     'manifest 项的 sha256 来自下载站清单本身；csv 项的 sha256 来自"本机当年上传的源文件"与"R2 现对象"双向计算相等' +
     '（见 dl-mirror-csv-sha.json / pin-csv-assets.mjs）。两类强度的来源不同，但都到了字节级；csv 那条不能声称与某个权威上游一致，' +
-    '因为这些 npm/包文件本身没有存哈希的清单。',
+    '因为这些 npm/包文件本身没有存哈希的清单。extra 项（dl-mirror-extra-pinned.json）是站内拼出来、两张表都不覆盖的键，' +
+    '哈希取自上游发布物本身，强度最高。',
   knownGaps: [
     { id: 'lyco-jev', why: 'manifest 钉 623029300 B / 3947c93b…，这份字节在所有可及面上都没有了（检索已穷尽，不是猜的）：服务器与本机按精确尺寸全盘 find 无命中；仓库无 Release/tag；27 个 app-debug 产物中 ≥100MB 的 7 个用绝对 Range 读中央目录，内层 APK 是 666.7M×3 / 1155.6M×3 / 1199M，没有 623029300；另两个桶的 4 个候选键全 404。源站现文件是另一个 build：1155579350 B / sha256 3b47b18b…（就地算的），境内实测 206/30 ms、类型正确 → 改链接技术上可用，但换的是 build、与 pin 冲突，等用户决定重钉' },
     // cute-pet 不再是 gap：pin 那份字节在服务器 /tmp 里还活着（2026-10-03 的副本，
@@ -79,5 +88,5 @@ const out = {
 };
 writeFileSync(here + 'dl-mirror-expected.json', JSON.stringify(out, null, 2) + '\n', 'utf8');
 console.log(
-  `写出 ${rows.length} 条（manifest ${rows.filter((r) => r.src === 'manifest').length}，csv ${rows.filter((r) => r.src === 'csv').length}）；knownGaps=${out.knownGaps.length}`
+  `写出 ${rows.length} 条（manifest ${rows.filter((r) => r.src === 'manifest').length}，csv ${rows.filter((r) => r.src === 'csv').length}，extra ${rows.filter((r) => r.src === 'extra').length}）；knownGaps=${out.knownGaps.length}`
 );

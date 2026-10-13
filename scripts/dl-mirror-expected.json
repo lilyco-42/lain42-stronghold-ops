@@ -1,6 +1,6 @@
 {
   "base": "https://dl.lilyco42.top",
-  "note": "manifest 项的 sha256 来自下载站清单本身；csv 项的 sha256 来自\"本机当年上传的源文件\"与\"R2 现对象\"双向计算相等（见 dl-mirror-csv-sha.json / pin-csv-assets.mjs）。两类强度的来源不同，但都到了字节级；csv 那条不能声称与某个权威上游一致，因为这些 npm/包文件本身没有存哈希的清单。",
+  "note": "manifest 项的 sha256 来自下载站清单本身；csv 项的 sha256 来自\"本机当年上传的源文件\"与\"R2 现对象\"双向计算相等（见 dl-mirror-csv-sha.json / pin-csv-assets.mjs）。两类强度的来源不同，但都到了字节级；csv 那条不能声称与某个权威上游一致，因为这些 npm/包文件本身没有存哈希的清单。extra 项（dl-mirror-extra-pinned.json）是站内拼出来、两张表都不覆盖的键，哈希取自上游发布物本身，强度最高。",
   "knownGaps": [
     {
       "id": "lyco-jev",
@@ -447,6 +447,22 @@
       "ct": "application/javascript",
       "src": "csv",
       "id": "wasm/opencv/4.13.0/opencv.js"
+    },
+    {
+      "key": "wasm/wllama/3.6.1/compat/wllama.js",
+      "size": 170982,
+      "sha256": "97f88f7bf26b17ead6be6e7c0c39d20e21661e71827eb5e3c9a468667fc249f5",
+      "ct": "application/javascript",
+      "src": "extra",
+      "id": "wasm/wllama/3.6.1/compat/wllama.js"
+    },
+    {
+      "key": "wasm/wllama/3.6.1/compat/wllama.wasm",
+      "size": 15369538,
+      "sha256": "3c447fe82f5376b1202f909a414348421fe196ae069e1504010f55c0454f85f4",
+      "ct": "application/wasm",
+      "src": "extra",
+      "id": "wasm/wllama/3.6.1/compat/wllama.wasm"
     }
   ]
 }

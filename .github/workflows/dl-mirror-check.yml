@@ -66,7 +66,7 @@ jobs:
           path: pages
           persist-credentials: false
       - name: 切流预检：站内真实引用的路径在新桶上是否可达
-        # 期望值钉死在脚本的 EXPECTED_MISSING（当前 4 条已知缺口）：
+        # 期望值钉死在脚本的 EXPECTED_MISSING（当前 2 条已知缺口）：
         # 多一条新缺口 → 红；已知缺口被补齐 → 也红（要求删条目，防止缺口清单悄悄过期）。
         # 所以它不会天天红，也就不需要 || echo 那种把死闸门写成绿的写法。
         run: node scripts/check-cutover-readiness.mjs pages

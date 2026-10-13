@@ -29,20 +29,20 @@ const CONCAT_KEYS = [
   'wasm/wllama/3.6.1/compat/wllama.wasm',
   'wasm/highs/1.15.3/build/highs.mjs',
 ];
-// 这四条钉在这里，但性质必须说清：它们**不是"切流才会坏"，是现在已经坏着** ——
-// 旧域名 dl.lain42.top 对这四条全回 403（OSS 账号停用），新桶回 404。
+// 钉在这里的是"补齐决定还没做"的缺口，性质必须说清：它们**不是"切流才会坏"，是现在已经坏着** ——
+// 旧域名 dl.lain42.top 全回 403（OSS 账号停用），新桶回 404。
 //   models/hf/catalog.json + wasm/transformers-js/3.8.1/transformers.bundle.mjs → tool/models 页
 //     app.mjs:76 是 fetch(catalog.json, {mode:'cors'})：桶没配 CORS 时 R2 自定义域名不回任何
 //     access-control-* 头，这一页光补键也不够（2026-10-13 已把 CORS 配上并实测到响应头，见下）。
 //   wasm/wllama/3.6.1/compat/{wllama.js,wllama.wasm} → tool/lyco_chat 页（index.html:118-119 setCompat）
-//     上游 npm 与 releases 都没有 compat 产物，只能自己从源码构建（本机不编译，得开一条 lane）；
-//     同页依赖的 index.min.js 新桶已有 200。
-// 闸门语义不变：多出第五条新缺口 → 红；这四条里任何一条被补齐 → 也红并要求删条目。
+//     2026-10-13 已补齐并移出缺口清单：这两份**不是要自己构建的东西** —— 3.6.1 的 index.min.js 里
+//     `WasmCompatFromCDN` 就写着它们来自 npm `@wllama/wllama-compat@3.6.1` 的 `wasm/wllama.{js,wasm}`，
+//     我上一轮"上游没有 compat 产物，只能从源码构建"是假阴性（搜的是 wllama 包，没搜 @wllama/wllama-compat）。
+//     现在桶里那份与 jsdelivr/unpkg 两次独立拉取逐字节一致，并已进 dl-mirror 期望表（src=extra，带 sha256）。
+// 闸门语义不变：多一条新缺口 → 红；钉着的任何一条被补齐 → 也红并要求删条目。
 const EXPECTED_MISSING = [
   'models/hf/catalog.json',
   'wasm/transformers-js/3.8.1/transformers.bundle.mjs',
-  'wasm/wllama/3.6.1/compat/wllama.js',
-  'wasm/wllama/3.6.1/compat/wllama.wasm',
 ];
 const CONTROL = 'lyco-dl/lyco-windows.zip';
 
