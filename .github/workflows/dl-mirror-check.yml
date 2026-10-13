@@ -5,20 +5,19 @@ name: dl-mirror 公开下载键持续验收
 # 浅模式只查头（状态/长度/Content-Type/Range），deep 模式额外整段流式回读比 manifest 的 sha256。
 on:
   schedule:
-    # 留着，但别指望它 —— 真正的触发见下面 workflow_run。
+    # 三层触发之一，不能单独依赖它（理由见下面 workflow_run 那段实测）。
     - cron: '17 3,9,15,21 * * *'
-  # 实测（2026-10-12→13）：这个账号的 GitHub cron 会推迟 6–7 小时，
-  # 而我改完排程后到点的槽位一个 run 都没产生：本车道 15:17 UTC 过期 1h19m 仍 0 run，
-  # 提醒器仓 source-drift 的 12:23 UTC 同理 0 run（两仓 12:00Z 之后 total runs = 0）。
-  # 反过来，同仓库的 sp-room-api（cron '22 2 * * *'）连续两天真落地：10-11 09:04Z、10-12 09:26Z。
-  # 所以与其继续加槽位（4 次/天已被证明解决不了），不如挂在一条被证明会跑的 workflow 后面。
+  # 实测（2026-10-12→13，修正过我自己过早的结论）：这个账号的 cron 会推迟 1–3 小时，
+  # 而且**部分槽位整槽丢失** —— 21:17Z 的槽位在 22:29:27Z 落地并 success，
+  # 但同一天的 15:17Z 槽位到过期后没有任何 run；提醒器仓也一样（18:23 槽 → 21:19:17Z 落地，12:23 槽无 run）。
+  # 所以不是"再多几个槽位"，而是叠三层：cron + workflow_run（父 sp-room-api，实测 16:41:35Z 点火）+ push。
   # workflow_run 只能触发同仓库的工作流，所以这层搭桥只能在 ops 仓做。
   workflow_run:
     workflows: ["Stronghold room observer compatibility"]
     types: [completed]
     branches: [main]
-  # 再加一条完全不需要定时器的触发：任何进 main 的提交都顺手验一遍。
-  # 这条今天就能验证（推本提交本身就会点一次），而 cron 那四条槽位到今天为止落地 0 次。
+  # 完全不依赖定时器的第三层：改了检查逻辑或本文档就必然自验一遍。
+  # 实测：推上一版改动的那次提交自己点了这一层（run 38338983662，三步全绿，含切流预检）。
   push:
     branches: [main]
     paths:
