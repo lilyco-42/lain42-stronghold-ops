@@ -26,6 +26,12 @@ case "$MODE" in
     echo
     curl --fail --silent --show-error --max-time 8 http://127.0.0.1:5188/v1/rooms || echo "(not answering)"
     echo
+    # Which code is actually RUNNING, not which file is on disk: the startup line prints the
+    # effective port list, so `game ports 5150,3000` proves the multi-port build is live and a
+    # bare `game ports 5150` means an older directory.mjs is still in memory (see --install).
+    echo "--- effective game ports (startup line) ---"
+    journalctl -u sp-lan-directory -n 20 --no-pager 2>/dev/null \
+      | grep -o 'game ports [0-9,]*' | tail -1 || echo "(startup line not found in the journal)"
     exit 0
     ;;
   --uninstall)
