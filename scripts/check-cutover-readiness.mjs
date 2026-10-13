@@ -11,7 +11,21 @@
 //
 // 用法：node scripts/check-cutover-readiness.mjs <Pages仓库路径>（必须给，CI 里给 checkout 出来的 'pages'）
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { argv } from 'node:process';
+
+// git grep 在"零命中"时退出码是 1，execFileSync 会把它当异常抛出来。切流之后站内不再引用旧域名，
+// 到那一天这几个 grep 必然有零命中的 —— 不包一层的话，这条预检会因为"引用都清干净了"而崩掉，
+// 也就是崩在成功的那一刻（rc=1 看着像红，其实是脚本自己的毛病）。零命中是空结果，不是错误。
+function gitGrep(args) {
+  try {
+    return execFileSync('git', args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  } catch (e) {
+    if (e && e.status === 1) return String(e.stdout || '');
+    throw e;
+  }
+}
 
 const REPO = argv[2];
 if (!REPO) {
@@ -53,13 +67,37 @@ const CONCAT_KEYS = [
 //   两个已知残留风险写在 docs/19：那份脚本仍硬编码旧域名（下次真发生模型变更时它会生成一份带死域名的目录，
 //   且它的 ossutil 上架那一步会因 OSS 停用而响亮失败，不会静默）；这份 catalog 是一次性快照，不会自己跟着语料变。
 const EXPECTED_MISSING = [];
+// 提取器只认字面 URL，而测试源码习惯把点写成 `\.`` —— 2026-10-13 实测：用字面模式数 Pages 仓得 17 个文件 / 27 处，
+// 允许转义形态后是 20 个文件 / 35 处，少算的 8 处全在 tests/ 里的断言上。测试断言本来就该跟着切流一起翻，
+// 但如果**站内代码**哪天也用转义形态写这个域名，我的提取器就会悄悄漏掉那条键 —— 预检报"全覆盖"而实际漏键。
+// 所以这里用 JS 正则以扫一遍全仓：非 tests/ 文件里出现"旧域名的转义形态"就报红，逼我修提取器或补清单。
+// 只认**带反斜杠**的转义形态。第一版写成 /dl\\?\.lain42\\?\.top/（反斜杠可选），
+// 结果 7 个正常写法的文件全被判成"提取器看不到" —— 一条天天红的闸门等于没有闸门。
+const ESCAPED = /dl\\\.lain42\\\.top/g;
+const fileList = gitGrep(['-C', REPO, 'grep', '-lI', 'lain42', '--', '.'])
+  .split('\n').map((s) => s.trim()).filter(Boolean);
+const blind = [];
+for (const rel of fileList) {
+  if (rel.startsWith('tests/')) continue;
+  let txt = '';
+  try {
+    txt = readFileSync(join(REPO, rel), 'utf8');
+  } catch {
+    continue; // 二进制或读不到：这条不是"看不到旧域名"，跳过
+  }
+  if (ESCAPED.test(txt)) blind.push(rel);
+  ESCAPED.lastIndex = 0;
+}
+if (blind.length) {
+  console.error('这些文件用转义形态引用旧域名，本脚本的提取器看不见它们（补进 CONCAT_KEYS 或改提取正则）：\n  ' + blind.join('\n  '));
+  process.exitCode = process.exitCode || 1;
+} else {
+  console.log('转义形态核对：非测试文件里没有提取器看不到的旧域名引用（tests/ 里的断言另算，切流时同批翻）');
+}
+
 const CONTROL = 'lyco-dl/lyco-windows.zip';
 
-const grep = execFileSync(
-  'git',
-  ['-C', REPO, 'grep', '-hI', '-oE', 'https://dl\\.lain42\\.top/[A-Za-z0-9_.\\/-]+', '--', '.'],
-  { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }
-);
+const grep = gitGrep(['-C', REPO, 'grep', '-hI', '-oE', 'https://dl\\.lain42\\.top/[A-Za-z0-9_.\\/-]+', '--', '.']);
 const keys = new Set(CONCAT_KEYS);
 for (const line of grep.split('\n')) {
   const m = line.trim().match(/^https:\/\/dl\.lain42\.top\/(.+)$/);
@@ -127,11 +165,7 @@ for (const k of [...keys].sort()) {
 // 拼接字面量的前缀要能让裸名 `OSS` 也匹配上：写成 `[A-Za-z_][A-Za-z0-9_]*(OSS|…)` 时
 // `OSS + 'wllama/…'` 一条都抓不到（'O' 被首位吃掉后剩余部分对不上分组），
 // 第一版因此只报"1 条"，是个近乎空转的漂移检查 —— 现在前缀用零次。
-const concat = execFileSync(
-  'git',
-  ['-C', REPO, 'grep', '-hI', '-oE', '[A-Za-z0-9_]*(OSS|BASE|Base)[A-Za-z0-9_]* *\\+ *[\'"`][^\'"`]+[\'"`]', '--', '.'],
-  { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }
-);
+const concat = gitGrep(['-C', REPO, 'grep', '-hI', '-oE', '[A-Za-z0-9_]*(OSS|BASE|Base)[A-Za-z0-9_]* *\\+ *[\'"`][^\'"`]+[\'"`]', '--', '.']);
 const seen = new Set();
 const unpinned = [];
 for (const line of concat.split('\n')) {
