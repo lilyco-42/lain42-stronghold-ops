@@ -11,7 +11,7 @@
 //
 // 密钥在 C:/Users/liuqi/.r2-asm-token（或环境变量 R2_ASM_TOKEN），不进仓库。
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync, statSync, existsSync, rmSync, writeFileSync, openSync, readSync, closeSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -68,18 +68,30 @@ function wrangler(args) {
   }
 }
 
-async function asm(pathname, params) {
+// Worker 这一腿走 curl，不走 node fetch —— 实测（2026-10-13）这台机器上 workers.dev 的 DNS 被污染成
+// Facebook 的 IP（157.240.12.50），node 直连必然 UND_ERR_CONNECT_TIMEOUT；而加 NODE_USE_ENV_PROXY=1
+// 让 node 用代理之后，同一个进程里的 wrangler 上传反过来失败（"Failed to fetch /accounts/…/objects/_asm/…"）。
+// curl 走系统代理一直是通的（无 token 时回 401 可证）。
+// token 不进 argv、不进日志：用 curl --config -，从 stdin 喂。
+function asm(pathname, params) {
   const q = new URLSearchParams(params).toString();
-  const res = await fetch(`${ASM}${pathname}?${q}`, {
-    headers: { 'x-asm-token': token() },
-    signal: AbortSignal.timeout(600000),
-  });
-  const body = await res.text();
-  if (!res.ok) throw new Error(`${pathname} → ${res.status} ${body.slice(0, 240)}`);
+  const cfg = [
+    `url = "${ASM}${pathname}?${q}"`,
+    `header = "x-asm-token: ${token()}"`,
+    'silent',
+    'show-error',
+    'fail-with-body',
+    'max-time = 600',
+  ].join('\n');
+  const p = spawnSync('curl', ['--config', '-'], { input: cfg, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  if (p.status !== 0) {
+    const out = String(p.stdout || '') + String(p.stderr || '');
+    throw new Error(`${pathname} → curl rc=${p.status} ${out.slice(0, 240)}`);
+  }
   try {
-    return JSON.parse(body);
+    return JSON.parse(p.stdout);
   } catch {
-    throw new Error(`${pathname} 返回不是 JSON：${body.slice(0, 200)}`);
+    throw new Error(`${pathname} 返回不是 JSON：${String(p.stdout).slice(0, 200)}`);
   }
 }
 
@@ -130,11 +142,34 @@ async function assemble(key, srcFile, contentType) {
   }
 }
 
-const manifest = JSON.parse(execFileSync('curl', ['-sS', '--fail', '--compressed', '--max-time', '30', MANIFEST_URL], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }));
-const items = manifest.items.filter((i) => i.mirror && i.mirror.url);
-const targets = ONLY.length ? items.filter((i) => ONLY.includes(i.id)) : items;
+// 两种目标来源：站内下载清单（默认），或一条手给的本地文件。
+// 后者是为了复用上面这套已验过的分片装配 + 回读比对，而不是给一个不在清单里的对象再写一条上传路径
+// （models/hf 那 504.8 MiB 的 GGUF 就是这种：它有权威 sha256，但不在 downloads/manifest.json 里）。
+const LOCAL = arg('local', false) ? String(arg('local')).replaceAll('\\', '/') : '';
+const LOCAL_PIN = arg('sha256', false) ? String(arg('sha256')) : '';
+let targets;
+if (LOCAL) {
+  if (!/^[0-9a-f]{64}$/.test(LOCAL_PIN)) {
+    console.error('--local 必须配 --sha256 <64 位小写十六进制>，否则回读无从比对');
+    process.exit(2);
+  }
+  if (!existsSync(LOCAL)) {
+    console.error(`--local 指向的文件不存在：${LOCAL}`);
+    process.exit(2);
+  }
+  const nm = basename(LOCAL);
+  targets = [{ id: 'local', mirror: { url: 'https://local/' + nm, size: statSync(LOCAL).size, sha256: LOCAL_PIN } }];
+  if (!STAGE) {
+    console.error('· --local 模式仍需 --stage 给出该文件所在目录（找源文件用的名字是 basename）');
+    process.exit(2);
+  }
+} else {
+  const manifest = JSON.parse(execFileSync('curl', ['-sS', '--fail', '--compressed', '--max-time', '30', MANIFEST_URL], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }));
+  const items = manifest.items.filter((i) => i.mirror && i.mirror.url);
+  targets = ONLY.length ? items.filter((i) => ONLY.includes(i.id)) : items;
+}
 if (!targets.length) {
-  console.log('没有匹配项。可用 id：' + items.map((i) => i.id).join(','));
+  console.log('没有匹配项。可用 id：' + (LOCAL ? '（--local 模式）' : '见 manifest'));
   process.exit(2);
 }
 console.log(`目标 ${targets.length} 条；桶 ${BUCKET}；装配器 ${ASM}`);

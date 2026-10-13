@@ -503,6 +503,246 @@
       "ct": "application/wasm",
       "src": "extra",
       "id": "wasm/transformers-js/3.8.1/ort-wasm-simd-threaded.jsep.wasm"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/added_tokens.json",
+      "size": 34604,
+      "sha256": "9715fd2243b6f06a5858b5e32950d2853f73dd5bc201aafcf76f5082a2d8acd1",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/added_tokens.json"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/config.json",
+      "size": 2243,
+      "sha256": "46aeea0a406afbeb563fc8e59ca10609203df4299af6a83f73752fef369efd2d",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/config.json"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/generation_config.json",
+      "size": 3772,
+      "sha256": "f5c67e5a4f7102f8cb4d058bc95da276bbc19eeec997267c3bb0f25ef68facd1",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/generation_config.json"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/merges.txt",
+      "size": 493869,
+      "sha256": "2df2990a395e35e8dfbc7511e08c12d56018d8d04691e0133e5d63b21e154dc6",
+      "ct": "text/plain",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/merges.txt"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/onnx/decoder_model_merged_quantized.onnx",
+      "size": 30719241,
+      "sha256": "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3",
+      "ct": "application/octet-stream",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/onnx/decoder_model_merged_quantized.onnx"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/onnx/encoder_model_quantized.onnx",
+      "size": 10124990,
+      "sha256": "2af4a414ca47aa30f61246017e5fe82b0a8d229281d1255ba666a2a7f6b84d19",
+      "ct": "application/octet-stream",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/onnx/encoder_model_quantized.onnx"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/preprocessor_config.json",
+      "size": 339,
+      "sha256": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/preprocessor_config.json"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/quantize_config.json",
+      "size": 10126,
+      "sha256": "6e0e27f293a5c17ff2ca8046f06079c0120aa2ede6456faac8ec4b3203471a55",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/quantize_config.json"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/special_tokens_map.json",
+      "size": 2194,
+      "sha256": "e67ae3a0aaa99abcd9f187138e12db1f65c16a14761c50ef10eef2c174a7a691",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/special_tokens_map.json"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/tokenizer.json",
+      "size": 2480466,
+      "sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/tokenizer.json"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/tokenizer_config.json",
+      "size": 282683,
+      "sha256": "2a4c4281cf9f51ac6ccc406fdc711a087afe6530f671fa7b80953edc498275ce",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/tokenizer_config.json"
+    },
+    {
+      "key": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/vocab.json",
+      "size": 1036584,
+      "sha256": "50d6a919f0a0601d56a04eb583c780d18553aa388254ba3158eb6a00f13e2c1a",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/whisper-tiny/resolve/ff4177021cc41f7db950912b73ea4fdf7d01d8e7/vocab.json"
+    },
+    {
+      "key": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/config.json",
+      "size": 658,
+      "sha256": "cb99455288675345e1a4f411438d5d0adbba5fbd3a67ea4fb03c015433b996c1",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/config.json"
+    },
+    {
+      "key": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/onnx/model_quantized.onnx",
+      "size": 118308185,
+      "sha256": "f80102d3f2a1229f387d3c81909990d8945513e347b0eab049f7de3c6f98c193",
+      "ct": "application/octet-stream",
+      "src": "extra",
+      "id": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/onnx/model_quantized.onnx"
+    },
+    {
+      "key": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/quant_config.json",
+      "size": 674,
+      "sha256": "59d175f15264115f18c698d76e443b5d49fc6c8c599911c421405ef4f236e87d",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/quant_config.json"
+    },
+    {
+      "key": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/sentencepiece.bpe.model",
+      "size": 5069051,
+      "sha256": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865",
+      "ct": "application/octet-stream",
+      "src": "extra",
+      "id": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/sentencepiece.bpe.model"
+    },
+    {
+      "key": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/special_tokens_map.json",
+      "size": 167,
+      "sha256": "d05497f1da52c5e09554c0cd874037a083e1dc1b9cfd48034d1c717f1afc07a7",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/special_tokens_map.json"
+    },
+    {
+      "key": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/tokenizer.json",
+      "size": 17082730,
+      "sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/tokenizer.json"
+    },
+    {
+      "key": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/tokenizer_config.json",
+      "size": 443,
+      "sha256": "a1d6bc8734a6f635dc158508bef000f8e2e5a759c7d92f984b2c86e5ff53425b",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/tokenizer_config.json"
+    },
+    {
+      "key": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/config.json",
+      "size": 989,
+      "sha256": "3ebbbdf3c3803649b49715fd169207c0f42c4250dfea5dd304b1d8b8f745852a",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/config.json"
+    },
+    {
+      "key": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/onnx/model_quantized.onnx",
+      "size": 107415176,
+      "sha256": "55614f3c7da74184742eaa0006b978744437aa91de9ba4913db42f94d7844a8f",
+      "ct": "application/octet-stream",
+      "src": "extra",
+      "id": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/onnx/model_quantized.onnx"
+    },
+    {
+      "key": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/quantize_config.json",
+      "size": 310,
+      "sha256": "9b60b5877b9a1687b5cddbc06124a974cb7536af9dbf5295279bf73c3823170c",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/quantize_config.json"
+    },
+    {
+      "key": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/special_tokens_map.json",
+      "size": 964,
+      "sha256": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/special_tokens_map.json"
+    },
+    {
+      "key": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/tokenizer.json",
+      "size": 17082832,
+      "sha256": "d0091a328b3441d754e481db5a390d7f3b8dabc6016869fd13ba350d23ddc4cd",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/tokenizer.json"
+    },
+    {
+      "key": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/tokenizer_config.json",
+      "size": 1286,
+      "sha256": "329b7d21f02c6c6c9d358733b03a34a89cd8e4fe36998869a6ab824b98e9bf9d",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX/resolve/ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e/tokenizer_config.json"
+    },
+    {
+      "key": "models/hf/chaoliangUNSW/Jev-Style-0.8B-Decision-v3-GGUF/resolve/edf37c26a1098f83cf4264b8adbe0dca2d2ebb0c/Jev-Style-0.8B-Decision-v3-Q4_K_M.gguf",
+      "size": 529296864,
+      "sha256": "0a19bc29bacc33e0d871146c8612b24dd14c2ed2e61cedeb7a928b0852628bac",
+      "ct": "application/octet-stream",
+      "src": "extra",
+      "id": "models/hf/chaoliangUNSW/Jev-Style-0.8B-Decision-v3-GGUF/resolve/edf37c26a1098f83cf4264b8adbe0dca2d2ebb0c/Jev-Style-0.8B-Decision-v3-Q4_K_M.gguf"
+    },
+    {
+      "key": "models/hf/chaoliangUNSW/Jev-Style-0.8B-Decision-v3-GGUF/resolve/edf37c26a1098f83cf4264b8adbe0dca2d2ebb0c/readout_config.json",
+      "size": 6236,
+      "sha256": "01de9bcce7effbfd1ae0a3fa13e52d7fa9aa4dd1cd1e47977d6bbdcd5e63054a",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/chaoliangUNSW/Jev-Style-0.8B-Decision-v3-GGUF/resolve/edf37c26a1098f83cf4264b8adbe0dca2d2ebb0c/readout_config.json"
+    },
+    {
+      "key": "models/hf/chaoliangUNSW/Jev-Style-0.8B-Decision-v3-GGUF/resolve/edf37c26a1098f83cf4264b8adbe0dca2d2ebb0c/LICENSE",
+      "size": 11544,
+      "sha256": "bbedc3fda3305820b977265f01b8619d87570a6739de3a5582c3464840f1e57a",
+      "ct": "text/plain",
+      "src": "extra",
+      "id": "models/hf/chaoliangUNSW/Jev-Style-0.8B-Decision-v3-GGUF/resolve/edf37c26a1098f83cf4264b8adbe0dca2d2ebb0c/LICENSE"
+    },
+    {
+      "key": "models/hf/chaoliangUNSW/Jev-Style-0.8B-Decision-v3-GGUF/resolve/edf37c26a1098f83cf4264b8adbe0dca2d2ebb0c/NOTICE",
+      "size": 2585,
+      "sha256": "5b20e266b5b9b9c12df4cb53db6801bc08fe8f1471355aaec15c1a9f9aa0b201",
+      "ct": "text/plain",
+      "src": "extra",
+      "id": "models/hf/chaoliangUNSW/Jev-Style-0.8B-Decision-v3-GGUF/resolve/edf37c26a1098f83cf4264b8adbe0dca2d2ebb0c/NOTICE"
+    },
+    {
+      "key": "models/hf/catalog.json",
+      "size": 8522,
+      "sha256": "3e94fc4752b75a46ea97abd2e6c114c88c46bd3e1fcb42efd01a337be816fddf",
+      "ct": "application/json",
+      "src": "extra",
+      "id": "models/hf/catalog.json"
     }
   ]
 }

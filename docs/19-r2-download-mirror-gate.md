@@ -81,7 +81,7 @@
 
 两条都跑同一个脚本 `scripts/check-dl-mirror.mjs`，期望值来自 `scripts/dl-mirror-expected.json`。
 
-## 期望表的两类来源（强度不同，别说混）
+## 期望表的三类来源（强度不同，别说混）
 
 - **manifest 项（22 条）**：期望值取自 `https://lain42.top/downloads/manifest.json` 的 `mirror.{url,size,sha256}`。
   这条能声称"与第三方清单一致"。每次生成表都会重新抓线上清单，所以站内加了新条目、改了尺寸，
@@ -91,6 +91,14 @@
   **本机当年上传的那份文件** 与 **R2 现对象** 各自算哈希，相等的键才写进表
   （2026-10-12 实测 33/33 一致、0 条不一致）。
   所以这条只能声称"桶里的字节 == 我上传的字节"，**不能**声称"与某个权威上游一致"。
+
+- **extra 项（37 条，`scripts/dl-mirror-extra-pinned.json`）**：上面两张表都覆盖不到、但站内代码真引用的键，
+  补一条就钉一条。这一类内部强度还分三层，引用时别一把话说：
+  · `wasm/wllama/3.6.1/compat/*` 两条 = 上游发布物 `@wllama/wllama-compat@3.6.1`，jsdelivr 与 unpkg 各拉一次
+    哈希相同 —— 可以说「与上游一致」；
+  · `wasm/transformers-js/3.8.1/*` 五条 = 按 Pages 仓 lock **重建**的产物，只能证明「lane 产物 == 桶里的对象」；
+  · `models/hf/*` 三十条 = 权威 pin 来自服务器 `/opt/lain42-model-sync/state.json`（LFS 文件是整文件 sha256，
+    非 LFS 是 git-blob-sha1），逐条对上才上架，所以这三十条是**真还原**。
 
 已知待定 `knownGaps` 只剩 1 条，表里写清了理由，脚本会 SKIP 它们并保证 `checked == items - skipped`（防止
 "全表被清空也显示全绿"）：
@@ -132,6 +140,38 @@ Range 各验一次 → 境内整段下载 42,715,247 B / 11.7 s / 3.6 MB/s。服
 顺带一个对做决定有用的副产品：**源站那份 1,155,579,350 B 的 build 在 CI 里也有第二出处**
 （两个 10-02 的 `app-debug` 产物内层正好是这个尺寸），所以如果你选"重钉到现 build"，
 那份字节不止 pingap 一处能取。
+
+## models/hf 语料是怎么补的（2026-10-13，`EXPECTED_MISSING` 因此清空）
+
+缺口清单里最后一条 `models/hf/catalog.json` 只是索引，它指向的模型语料是 **29 个文件 / 839,471,805 B**，
+新桶里当时全是 404。补法按顺序是：
+
+1. 从服务器**只读**取 `state.json`（每条带 `path/bytes/checksum/checksumAlgorithm`）与 `models.json`；
+2. 本机从 `https://hf-mirror.com` 按 `<repo>/resolve/<revision>/<path>` 逐条下载（实测 3.04 MB/s，29 条 116 s 下完），
+   **按它自己声明的算法**校验：8 条 LFS 比整文件 sha256，21 条比 git blob sha1（`sha1("blob <len>\0" + 内容)`），29/29 全过才继续；
+3. 上架：28 条走 `wrangler r2 object put --remote`（每条上架后用 `Range: bytes=0-0` 回读，比对 `content-range`
+   里的总长；中途真失败过 1 条，补传后才 28/28），最后一条 `Jev-Style-0.8B…gguf` 504.8 MiB 超 wrangler 的
+   300 MiB 硬上限，走 `scripts/r2-put-large.mjs` 的分片装配 + 回读整段 sha256（实测这一条单独花了 **1635 s**，
+   本机→R2 约 1 MB/s；装配成功时临时分片会自动删掉，`_asm/*` 现在全是 404）；
+4. `catalog.json` 用**服务器那份 `sync_hf_models.py` 的 `build_catalog()`** 生成（本机跑它的副本；它是纯函数，
+   只吃 manifest + state）—— 不另写一份 node 版，抄一份就会和线上漂移。生成物只改两处 base，改完断言旧域名
+   一条不剩，并检查页面自己的契约（`app.mjs:79`：`schemaVersion==1`、`models` 是非空数组、`runtime.version=='3.8.1'`）。
+   最终 8,522 B / sha256 `3e94fc47…`，4 个模型、声明 800.6 MiB。
+
+**两处残留风险，别当成已经收尾**：
+· 服务器上那份脚本仍把 `runtime.url` / `wasmBase` 硬编码成旧域名。下一次真发生模型变更时它会生成一份带死域名
+  的目录，而它的 `ossutil` 上架那一步会因为 OSS 停用而响亮失败（`check=True`），不会静默成功 —— 把它改成写新桶
+  属于**服务器写**，要点头；
+· 我上传的这份 `catalog.json` 是一次性快照，不会跟着语料自动更新。而且每天 11:15 UTC 那条 cron 现在天天打印
+  `unchanged ×4 + catalog unchanged` —— 它的成功路径就是「啥也不干」，因此**不可能**报告「输出端已经死了」。
+  这类「绿灯等于覆盖」和本页开头那条 cron 教训是同一个。
+
+**补这批时踩到的两个传输层坑（是这台机器的环境，不是通用知识）**：
+· `*.workers.dev` 的 DNS 在这台机器上被污染成 Facebook 的 IP（`nslookup` 给 157.240.12.50），node 直连必然
+  `UND_ERR_CONNECT_TIMEOUT`；
+· 用 `NODE_USE_ENV_PROXY=1` 让 node 走代理之后，**同一进程里的 wrangler 上传反过来失败**
+  （`Failed to fetch /accounts/…/objects/_asm/…`）。所以 `r2-put-large.mjs` 的 Worker 那一腿改成走 curl
+  （系统代理一直是通的，无 token 时回 401 可证），token 用 `curl --config -` 从 stdin 喂，不进 argv 也不进日志。
 
 ## 怎么加一条 / 怎么改钉
 

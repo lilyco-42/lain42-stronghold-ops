@@ -29,8 +29,8 @@ const CONCAT_KEYS = [
   'wasm/wllama/3.6.1/compat/wllama.wasm',
   'wasm/highs/1.15.3/build/highs.mjs',
 ];
-// 钉在这里的是"补齐决定还没做"的缺口，性质必须说清：它们**不是"切流才会坏"，是现在已经坏着** ——
-// 旧域名 dl.lain42.top 全回 403（OSS 账号停用），新桶回 404。
+// 这个数组现在是空的 —— 下面记的是它为什么曾经装着四条、以及一条条是怎么被清掉的。
+// 它们当时的性质不是"切流会弄坏"，而是"已经坏了"：旧域名 dl.lain42.top 全回 403（OSS 账号停用），新桶回 404。
 //   models/hf/catalog.json + wasm/transformers-js/3.8.1/transformers.bundle.mjs → tool/models 页
 //     app.mjs:76 是 fetch(catalog.json, {mode:'cors'})：桶没配 CORS 时 R2 自定义域名不回任何
 //     access-control-* 头，这一页光补键也不够（2026-10-13 已把 CORS 配上并实测到响应头，见下）。
@@ -46,9 +46,13 @@ const CONCAT_KEYS = [
 //   （run 38346395050：bundle 870,563 B / 094392fc…，外加 app.mjs:130 需要的 4 个 ort 文件，
 //   合计约 33.6 MB），产物已 --remote 灌进桶并从公网回读哈希一致。
 //   注意强度：这是**按 lock 重建**的产物，钉住它只证明"lane 产物==桶里的对象"，不证明等于 OSS 原字节。
-const EXPECTED_MISSING = [
-  'models/hf/catalog.json',
-];
+//
+// models/hf/catalog.json 也于同日补齐（现在数组是空的 —— 这一步从此变成"站内引用必须全部可达"的硬闸门）：
+//   内容由服务器上那份 sync_hf_models.py 的 build_catalog() 生成（本机跑它的副本，只把两处 base 换新域名），
+//   配套的 29 个模型文件（839,471,805 B）按 /opt/lain42-model-sync/state.json 里的 pin 逐条校验后上架。
+//   两个已知残留风险写在 docs/19：那份脚本仍硬编码旧域名（下次真发生模型变更时它会生成一份带死域名的目录，
+//   且它的 ossutil 上架那一步会因 OSS 停用而响亮失败，不会静默）；这份 catalog 是一次性快照，不会自己跟着语料变。
+const EXPECTED_MISSING = [];
 const CONTROL = 'lyco-dl/lyco-windows.zip';
 
 const grep = execFileSync(
