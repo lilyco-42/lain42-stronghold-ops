@@ -1,0 +1,94 @@
+name: 构建 tool/models 浏览器运行时（transformers bundle + ort）
+
+# 为什么单独一条：`wasm/transformers-js/3.8.1/transformers.bundle.mjs` 是切流预检里剩下的
+# 两条缺口之一，旧域名（OSS）那份 403、新桶 404。生产者不用另写 —— Pages 仓里
+# `tool/models/build-runtime.mjs` 就是当年产出它的脚本（esbuild，minify，external `*.wasm`，
+# 再从 onnxruntime-web/dist 拷四个 ort 文件）。这里只做一件事：在 CI 里把它跑出来。
+#
+# 为什么不写在 Pages 仓里：那个仓一推就发布站点本身（切流是另一个决定，见 docs/19），
+# 而这条只是"取产物"，读 Pages 的代码、不碰它的发布。
+#
+# 为什么不在本机跑：本机的编译/打包一律禁止，产物一律由 Actions 出。
+#
+# 强度要说清楚：这条 lane 产出的是"按 lock 里那两个版本号重建的自洽产物"，
+# 它**不能**声称与 OSS 时代那份字节相同（那份没有留哈希，也取不回来了）。
+on:
+  workflow_dispatch:
+    inputs:
+      pages_ref:
+        description: 'lilyco-42.github.io 的 ref（默认 main；要复现历史产物就填具体 commit）'
+        required: false
+        default: 'main'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Pages（只读，不带凭据）
+        uses: actions/checkout@v4
+        with:
+          repository: lilyco-42/lilyco-42.github.io
+          ref: ${{ inputs.pages_ref }}
+          path: pages
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: pages/tool/models/package-lock.json
+
+      - name: 按 lock 装依赖（esbuild + @huggingface/transformers 3.8.1）
+        run: npm ci
+        working-directory: pages/tool/models
+
+      - name: 构建
+        run: node build-runtime.mjs
+        working-directory: pages/tool/models
+
+      - name: 核对产物并算哈希（缺一个就红，不接受"部分成功"）
+        run: |
+          set -euo pipefail
+          cd pages/tool/models/dist
+          # 站内需要的是这五个：bundle 本体 + ort 的两对（.mjs + .wasm）。
+          # app.mjs:130 把 env.backends.onnx.wasm.wasmPaths 指到 bundle 同目录，
+          # 所以 ort 少一个文件，页面就是"运行时能加载、推理时 404"。
+          need=(
+            transformers.bundle.mjs
+            ort-wasm-simd-threaded.mjs
+            ort-wasm-simd-threaded.wasm
+            ort-wasm-simd-threaded.jsep.mjs
+            ort-wasm-simd-threaded.jsep.wasm
+          )
+          # 计划上传的键与 MIME：日志里就把这两样写清楚，入库那步才对得上（.mjs 必须是
+          # JS MIME，浏览器 import() 只认 text/javascript / application/javascript）。
+          mime_for() { case "$1" in *.wasm) echo application/wasm ;; *) echo text/javascript ;; esac; }
+          fail=0
+          for f in "${need[@]}"; do
+            if [ ! -s "$f" ]; then echo "缺产物：$f（0 字节或不存在）"; fail=1; continue; fi
+            printf '%-40s %10d B  %s  mime=%s\n' "$f" "$(stat -c %s "$f")" "$(sha256sum "$f" | cut -d' ' -f1)" "$(mime_for "$f")"
+          done
+          [ "$fail" = 0 ] || { echo "产物清单不完整，不出 artifact"; exit 1; }
+          for f in "${need[@]}"; do
+            if grep -qa 'dl\.lain42\.top' "$f"; then
+              echo "产物里烧进了旧域名 dl.lain42.top：$f —— 这份不能入库"; exit 1
+            fi
+          done
+          echo "五个产物齐、且不含旧域名"
+
+      - name: 取 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hf-runtime-3.8.1
+          path: |
+            pages/tool/models/dist/transformers.bundle.mjs
+            pages/tool/models/dist/ort-wasm-simd-threaded.mjs
+            pages/tool/models/dist/ort-wasm-simd-threaded.wasm
+            pages/tool/models/dist/ort-wasm-simd-threaded.jsep.mjs
+            pages/tool/models/dist/ort-wasm-simd-threaded.jsep.wasm
+            pages/tool/models/dist/THIRD-PARTY-NOTICES.md
+          if-no-files-found: error
