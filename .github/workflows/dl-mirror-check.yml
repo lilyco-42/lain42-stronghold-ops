@@ -17,6 +17,14 @@ on:
     workflows: ["Stronghold room observer compatibility"]
     types: [completed]
     branches: [main]
+  # 再加一条完全不需要定时器的触发：任何进 main 的提交都顺手验一遍。
+  # 这条今天就能验证（推本提交本身就会点一次），而 cron 那四条槽位到今天为止落地 0 次。
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'docs/19-r2-download-mirror-gate.md'
+      - '.github/workflows/dl-mirror-check.yml'
   workflow_dispatch:
     inputs:
       deep:
@@ -49,6 +57,20 @@ jobs:
           else
             node scripts/check-dl-mirror.mjs
           fi
+      - name: 取站内代码（Pages 仓是公开的）好核对真实引用路径
+        # 预检必须能看到站内代码，否则在 runner 上就是个哑巴步骤。
+        # 本机跑法是 `node scripts/check-cutover-readiness.mjs D:/Code/lilyco-42.github.io`，
+        # CI 里传 'pages' —— 两条路都要求传目录，脚本不再默认某个人的 Windows 路径。
+        uses: actions/checkout@v4
+        with:
+          repository: lilyco-42/lilyco-42.github.io
+          path: pages
+          persist-credentials: false
+      - name: 切流预检：站内真实引用的路径在新桶上是否可达
+        # 期望值钉死在脚本的 EXPECTED_MISSING（当前 4 条已知缺口）：
+        # 多一条新缺口 → 红；已知缺口被补齐 → 也红（要求删条目，防止缺口清单悄悄过期）。
+        # 所以它不会天天红，也就不需要 || echo 那种把死闸门写成绿的写法。
+        run: node scripts/check-cutover-readiness.mjs pages
       - name: 期望表本身要和线上 manifest 对齐（防我改漏）
         # 不要在这一步加 `|| echo '::warning::'`：上一版就是这么写的，脚本因为读不到
         # _staging 的草稿 CSV 直接 ENOENT，却被吞成 step success —— 一道从没跑过的闸门。

@@ -9,11 +9,17 @@
 //   2) 用 base 拼出来的（正则抓不到，只能把代码里出现的相对路径列进 CONCAT_KEYS）
 //      这一份是要人工跟着站内代码维护的，漏了就是假绿。
 //
-// 用法：node scripts/check-cutover-readiness.mjs [Pages仓库路径]
+// 用法：node scripts/check-cutover-readiness.mjs <Pages仓库路径>（必须给，CI 里给 checkout 出来的 'pages'）
 import { execFileSync } from 'node:child_process';
 import { argv } from 'node:process';
 
-const REPO = argv[2] || 'D:/Code/lilyco-42.github.io';
+const REPO = argv[2];
+if (!REPO) {
+  // 不再默认某个人的 Windows 路径：那样 CI 会像上一版闸门一样 ENOENT，
+  // 而如果被 || 吞掉就永远没人发现。要么显式传目录，要么明确报错。
+  console.error('用法: node scripts/check-cutover-readiness.mjs <Pages 仓库目录>');
+  process.exit(2);
+}
 const BASE = 'https://dl.lilyco42.top/';
 // 站内以 OSS + '…' 形式拼接出来的具体文件（2026-10-12 从 lyco_chat / models 页面里读出来的）
 const CONCAT_KEYS = [
@@ -23,7 +29,16 @@ const CONCAT_KEYS = [
   'wasm/wllama/3.6.1/compat/wllama.wasm',
   'wasm/highs/1.15.3/build/highs.mjs',
 ];
-// 正向对照：今天整段验过 sha256 的对象，它若拿不到就是本脚本或网络坏了，不是桶空了
+// 已知缺口 = 切流决定还没做的四条。把它们钉在这里，闸门才有意义：
+//   · 出现第五条新缺口 → 红（这才是"漂移检测"）
+//   · 这四条里有任何一条被补齐 → 也红（提醒把这里删掉，否则缺口清单会过期）
+// 决定之后把整个数组清空，这一步就变成"站内引用必须全部可达"的硬闸门。
+const EXPECTED_MISSING = [
+  'models/hf/catalog.json',
+  'wasm/transformers-js/3.8.1/transformers.bundle.mjs',
+  'wasm/wllama/3.6.1/compat/wllama.js',
+  'wasm/wllama/3.6.1/compat/wllama.wasm',
+];
 const CONTROL = 'lyco-dl/lyco-windows.zip';
 
 const grep = execFileSync(
@@ -55,24 +70,40 @@ if (ctrl.code !== 200 && ctrl.code !== 206) {
 }
 console.log(`正向对照 ${CONTROL} → ${ctrl.code}`);
 
-const fileish = [];
-const prefix = [];
+const newMissing = [];
+const stillMissing = [];
+const healed = [];
+let reachable = 0;
 for (const k of [...keys].sort()) {
   const p = await probe(k);
-  const line = `${String(p.code).padEnd(4)} ${(p.total || '-').padEnd(11)} ${k}`;
-  if (p.code === 200 || p.code === 206) console.log('OK   ' + line);
-  else if (/\.[a-z0-9]{2,5}$/i.test(k)) {
-    fileish.push(line);
-    console.log('MISS ' + line);
+  const isFile = /\.[a-z0-9]{2,5}$/i.test(k);
+  const gone = p.code !== 200 && p.code !== 206;
+  if (!gone) {
+    reachable += 1;
+    console.log(`OK   ${String(p.code).padEnd(4)} ${(p.total || '-').padEnd(11)} ${k}`);
+    if (EXPECTED_MISSING.includes(k)) healed.push(k);
+  } else if (!isFile) {
+    console.log(`（前缀，不是文件）${String(p.code).padEnd(4)} ${k}`);
+  } else if (EXPECTED_MISSING.includes(k)) {
+    stillMissing.push(k);
+    console.log(`已知缺口 ${String(p.code).padEnd(4)} ${k}`);
   } else {
-    prefix.push(line);
-    console.log('（前缀，不是文件）' + line);
+    newMissing.push(k);
+    console.log(`NEW-MISS ${String(p.code).padEnd(4)} ${k}`);
   }
 }
-console.log(`\n合计 ${keys.size} 条：拿不到的"看起来是文件"的 ${fileish.length} 条，目录前缀 ${prefix.length} 条`);
-if (fileish.length) {
-  console.error('这些键切过去就是 404，先补进桶或让那一页继续指向原处：\n  ' + fileish.join('\n  '));
+
+console.log(`\n引用 ${keys.size} 条：可达 ${reachable}，已知缺口 ${stillMissing.length}，新缺口 ${newMissing.length}`);
+// 两个方向都要报：新缺口是"又要多坏一页"，被补齐是"这里的清单过期了，删掉它"。
+// 只报前者会让缺口清单永远悄悄烂在里面。
+if (newMissing.length) {
+  console.error('出现新的缺口（切过去就是 404）：\n  ' + newMissing.join('\n  '));
   process.exitCode = 1;
-} else if (!process.exitCode) {
-  console.log('站内引用的路径在新桶上全部可达');
+}
+if (healed.length) {
+  console.error('这些键已经能取到了，请把 EXPECTED_MISSING 里对应条目删掉：\n  ' + healed.join('\n  '));
+  process.exitCode = process.exitCode || 1;
+}
+if (!newMissing.length && !healed.length && !process.exitCode) {
+  console.log(`站内引用在新桶上除已知 ${EXPECTED_MISSING.length} 条缺口外全部可达`);
 }

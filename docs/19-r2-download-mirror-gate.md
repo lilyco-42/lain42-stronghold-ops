@@ -21,6 +21,24 @@
 并在 2026-10-12 16:41:35Z 实测点火（父 run 完成 18 秒后出现 `event=workflow_run` 且 success）。
 教训：**"加了 schedule"不等于"会被跑"；触发机制要用一次真实点火证明，不能靠文档。**
 
+浅车道现在有**三个**触发源：4 个 cron 槽位（冗余）、`workflow_run`（父 `sp-room-api`）、以及进 main 的提交
+（`paths` 限定 `scripts/**`、本文档与它自己的 YAML —— 让"改了检查逻辑"必然被自己验一遍）。
+
+## 切流预检（`scripts/check-cutover-readiness.mjs`）
+
+它回答的是另一个问题：**站内代码真会去取的那些路径，新桶里有没有。** 期望表覆盖不到这件事
+（它来自下载清单 + 2026-09-28 那份 OSS 清单），所以两边要独立测。
+
+- 两类引用都要看：正则抓得到的 `https://dl.lain42.top/…` 字面量，以及
+  `OSS + 'wllama/3.6.1/compat/wllama.js'` 这种拼接出来的（后者靠脚本里 `CONCAT_KEYS` 手工维护，漏了就是假绿）。
+- 当前 4 条已知缺口钉在 `EXPECTED_MISSING`：多一条新缺口 → 红；**已知缺口被补齐 → 也红**并要求删条目，
+  缺口清单就不会悄悄过期。因此它今天绿，不需要 `|| echo` 那种把死闸门写成绿的写法。
+  两个方向都做过变异验证：塞一条不存在的键 → `NEW-MISS` rc=1；把一条可达的塞进清单 → 要求删条目 rc=1。
+- 带正向对照（`lyco-dl/lyco-windows.zip`，今天整段验过 sha256）：对照拿不到就 rc=3 作废整批结论 ——
+  第一版就是靠它发现我自己踩了 `execFile('curl')` + `-o /dev/null` 两个 Windows 坑，15 条全假 404。
+- 必须显式传 Pages 仓库目录（CI 里是 checkout 出来的 `pages`，本机 `D:/Code/lilyco-42.github.io`），
+  不给就 rc=2：不再默认某个人的绝对路径，那是上一版漂移闸门的死法。
+
 两条都跑同一个脚本 `scripts/check-dl-mirror.mjs`，期望值来自 `scripts/dl-mirror-expected.json`。
 
 ## 期望表的两类来源（强度不同，别说混）
