@@ -32,8 +32,8 @@ const CONCAT_KEYS = [
 // 这四条钉在这里，但性质必须说清：它们**不是"切流才会坏"，是现在已经坏着** ——
 // 旧域名 dl.lain42.top 对这四条全回 403（OSS 账号停用），新桶回 404。
 //   models/hf/catalog.json + wasm/transformers-js/3.8.1/transformers.bundle.mjs → tool/models 页
-//     app.mjs:76 是 fetch(catalog.json, {mode:'cors'})，而 R2 自定义域名不发 CORS 头，
-//     所以这一页光补键不够，**必须先在桶上设 CORS**（这条把 CORS 从"可选"变成硬前置）。
+//     app.mjs:76 是 fetch(catalog.json, {mode:'cors'})：桶没配 CORS 时 R2 自定义域名不回任何
+//     access-control-* 头，这一页光补键也不够（2026-10-13 已把 CORS 配上并实测到响应头，见下）。
 //   wasm/wllama/3.6.1/compat/{wllama.js,wllama.wasm} → tool/lyco_chat 页（index.html:118-119 setCompat）
 //     上游 npm 与 releases 都没有 compat 产物，只能自己从源码构建（本机不编译，得开一条 lane）；
 //     同页依赖的 index.min.js 新桶已有 200。
@@ -74,6 +74,20 @@ if (ctrl.code !== 200 && ctrl.code !== 206) {
   process.exitCode = 3;
 }
 console.log(`正向对照 ${CONTROL} → ${ctrl.code}`);
+
+// 桶 CORS 是 tool/models 这类 fetch(..., {mode:'cors'}) 页面的硬前置：2026-10-13 已在桶上设好
+// （deploy/r2-dl-cors.json，npx wrangler r2 bucket cors set lain42-dl --file deploy/r2-dl-cors.json -y）。
+// 但"设过"不等于"现在还在" —— 它不在仓库里，谁都能在 Cloudflare 控制台一键删掉，所以每天探一次真实响应头。
+const corsRes = await fetch(BASE + CONTROL, {
+  headers: { Origin: 'https://lain42.top', Range: 'bytes=0-0' },
+  signal: AbortSignal.timeout(25000),
+});
+const acao = corsRes.headers.get('access-control-allow-origin');
+const expose = corsRes.headers.get('access-control-expose-headers') || '';
+await corsRes.body?.cancel().catch(() => {});
+// Content-Range 必须在 expose 里：下载页算进度要读它，缺了就是 206 也拿不到总长。
+const corsOk = (corsRes.status === 200 || corsRes.status === 206) && !!acao && /Content-Range/i.test(expose);
+console.log(`桶 CORS：status=${corsRes.status} ACAO=${acao ?? '(无)'} Content-Range在expose里=${/Content-Range/i.test(expose)}`);
 
 const newMissing = [];
 const stillMissing = [];
@@ -140,6 +154,13 @@ if (healed.length) {
   console.error('这些键已经能取到了，请把 EXPECTED_MISSING 里对应条目删掉：\n  ' + healed.join('\n  '));
   process.exitCode = process.exitCode || 1;
 }
-if (!newMissing.length && !healed.length && !process.exitCode) {
+if (!corsOk) {
+  console.error(
+    `桶 CORS 不可用（status=${corsRes.status} ACAO=${acao ?? '(无)'} expose=${expose || '(无)'}）` +
+      '→ 站内 fetch 会直接被浏览器拦掉，先重新应用 deploy/r2-dl-cors.json'
+  );
+  process.exitCode = process.exitCode || 1;
+}
+if (!newMissing.length && !healed.length && corsOk && !process.exitCode) {
   console.log(`站内引用在新桶上除已知 ${EXPECTED_MISSING.length} 条缺口外全部可达`);
 }

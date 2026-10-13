@@ -43,8 +43,20 @@
 - **这 4 条的性质今天纠正了一次：不是"切流会弄坏"，是"已经坏了"。** 旧域名 `dl.lain42.top` 对这四条全部回
   403（OSS 停用），新桶回 404，所以 `tool/models` 与 `tool/lyco_chat` 两页现在就是坏的，补齐它们属于**修复**。
   而且 `tool/models/app.mjs:76` 是用 `fetch(catalog.json, {mode:'cors'})` 跨源取目录，
-  R2 自定义域名不发 CORS 头 —— **桶 CORS 因此是这一页恢复的硬前置，不是可选优化**；
+  桶没配 CORS 时 R2 自定义域名不回任何 `access-control-*` 头 —— **桶 CORS 因此是这一页恢复的硬前置，不是可选优化**；
   `compat/wllama.{js,wasm}` 上游没有，只能从 `ngxson/wllama` 源码构建（构建走 lane，不在本机编译）。
+- **桶 CORS 已于 2026-10-13 配上**（`deploy/r2-dl-cors.json`，重建：
+  `npx wrangler r2 bucket cors set lain42-dl --file deploy/r2-dl-cors.json -y`，读回 `... cors list lain42-dl`）。
+  在服务器（干净出口，本机走代理只会拿到 `200 Connection established`）实测三条：
+  GET+`Origin` → 200 带 `access-control-allow-origin: *` 与 `access-control-expose-headers`；
+  `Range` GET+`Origin` → 206 且 `Content-Range` 在 expose 列表里（下载页算进度必须读得到它）；
+  `OPTIONS` 预检 → 204 带 `allow-methods: GET, HEAD`、`allow-headers: range`、`max-age: 3600`。
+  两个坑记在这里：① `methods` 里放 `"OPTIONS"` 会被 API 拒成
+  `The JSON you provided was not well formed. [code: 10040]` —— 报错说的是"JSON 格式"，实际是**取值非法**，
+  按字面去查 JSON 语法会查不出来；预检本身不需要把它列为允许方法。② 每次失败后 `cors list` 都回 10059
+  （配置不存在），确认没有"半应用"的中间态。
+  配置不在仓库里，控制台一键就能删掉，所以 `check-cutover-readiness.mjs` 现在直接断言这三条头里的两条：
+  对照键的响应没有 ACAO 或 expose 里没有 `Content-Range` → 红。
 - 带正向对照（`lyco-dl/lyco-windows.zip`，今天整段验过 sha256）：对照拿不到就 rc=3 作废整批结论 ——
   第一版就是靠它发现我自己踩了 `execFile('curl')` + `-o /dev/null` 两个 Windows 坑，15 条全假 404。
 - 必须显式传 Pages 仓库目录（CI 里是 checkout 出来的 `pages`，本机 `D:/Code/lilyco-42.github.io`），
@@ -147,6 +159,8 @@ CI run 38234496095 第一次跑 `--deep all` 就红了，原因不在数据，�
    不是 step 结论。现在：输入全部落仓库、路径相对脚本自身、去掉 `||`、再加一条"来源残缺"断言，
    并用变异测试证明它会红（删一行快照 → diff rc=1；把表过滤成单一来源 → 断言炸）。
 2. **R2 自定义域名只发桶对象**。Worker 的 `/health` 在这个域名上 404，`data.json` 才在；
-   绑域名等于**整桶公开可读**，且响应不带 CORS 头、带 `Cache-Control: max-age=14400`。
+   绑域名等于**整桶公开可读**，且默认响应不带 CORS 头、带 `Cache-Control: max-age=14400`
+   （CORS 是桶级配置，`lain42-dl` 已于 2026-10-13 配上，见上；`max-age` 那条仍在，切流后 4 小时内的
+   旧响应可能还在边缘，验证时要带 query 绕开缓存）。
    顺带一条对比：同一批静态对象，源站 pingap 的整段 GET 会被严格 HTTP 客户端拒掉
    （`Transfer-Encoding can't be present with Content-Length`），R2 这条路正常。
