@@ -28,8 +28,14 @@ DD=/etc/systemd/system/stronghold.service.d
 DROP=$DD/90-auto-deploy.conf
 UNIT=stronghold.service
 LOG=/var/log/sp-auto-upgrade.log
+# 试跑端口块（5198/5199）刻意与常驻服务的 515x/518x 分开：
+#   5150 游戏 / 5152 sp-dev-test / 5187 房间 API（pingap 路由 /api/bot/v1/）
+#   5188 局域网目录 sp-lan-directory（pingap 路由 sp_lan_directory_backend）
+# 2026-10-13 实测：隔离验证的试跑 API 曾用 5188，与 sp-lan-directory 撞端口 →
+#   preload 报 "loopback listener unavailable: EADDRINUSE"，curl 打到目录服务上拿到 200、
+#   闸门误判成「未认证返回 200」而 fail closed（生产未受影响）。故移出 5188。
 TRIAL_PORT=5199
-TRIAL_API_PORT=5188
+TRIAL_API_PORT=5198
 LIVE_PORT=5150
 LIVE_API_PORT=5187
 KEEP_TREES=3

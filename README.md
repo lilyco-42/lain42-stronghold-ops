@@ -110,7 +110,7 @@ scripts/
   deploy.sh                  部署脚本（含步骤 2b：恢复 local 素材，防重部署丢失）
   sp-watchdog.sh + .service + .timer          自愈：FD / 熔断 / 内存 / tmpfs
   sp-auto-upgrade.sh          把生产切到 deploy/verified 的那棵树（通用：一版一脚本结束）。
-                              幂等；先隔离端口 5199/5188 验证再碰生产；失败回滚到**切换前那棵树**（只退一版）
+                              幂等；先隔离端口 5199/5198 验证再碰生产；失败回滚到**切换前那棵树**（只退一版）
   sp-auto-upgrade.service + .timer   每天 04:30（Persistent + ≤5 分钟抖动）触发上面那个
   sp-upstream-fetch.sh        往裸仓抓 upstream-master / **verified-deploy** / fork-deploy-prod（只读，不碰生产）
   sp-apply-ws-compress.sh + .service + .timer 等没人在线时自动开 WS 压缩

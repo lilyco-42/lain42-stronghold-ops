@@ -86,7 +86,7 @@ sp-auto-upgrade.timer（每天 04:30，Persistent，抖动 ≤5 分钟）
              git archive（**不碰共享 .git**）+ 软链当前树 node_modules
              + cp -al 硬链当前树 public/assets（零额外磁盘）+ 带过 index-oss.html
              + transform-assets.mjs 切 CDN
-        ③ 隔离端口验证：游戏 5199 / 房间 API 5188，**生产一动不动**
+        ③ 隔离端口验证：游戏 5199 / 房间 API 5198，**生产一动不动**
         ④ 换 drop-in（90-auto-deploy.conf，排最后）+ 停用 30-upstream-*.conf + 重启
         ⑤ 三处健康闸门：本地 healthz / 房间 API 401+200 / 公网代理 401+200
         ⑥ 任一不过 → 回滚到**切换前那棵树**；全过 → 记 SHA + 清旧树（留 3 个）
@@ -219,3 +219,45 @@ gh release view v0.2.4-lain42 -R lilyco-42/Stronghold-Protocol --json tagName,is
 gh api repos/lilyco-42/Stronghold-Protocol/git/refs/tags --jq '.[].ref'   # 不应出现裸 v0.2.4
 gh api repos/sganggs/Stronghold-Protocol/git/ref/tags/v0.2.4 --jq '.object.sha'  # 上游那个不许被动过
 ```
+
+---
+
+## 8. 端口预留（2026-10-13 撞车实录）
+
+`deploy/verified` 从 `a8dc5091`（0.2.4）前进到 `8d09f5af`（0.2.5）之后，第一次手动触发升级**失败关闭**，
+生产毫发无损（`app` 仍 0.2.4、`uptimeSec` 连续、`deployed.sha` 未动）——但闸门误判了：
+
+```
+[11:54:59] 隔离验证：游戏 :5199 / 房间 API :5188
+[11:55:02]   ✓ healthz app=0.2.5
+[11:55:02]   ✗ 房间 API 未认证期望 401，实得 200
+```
+
+**根因不是代码，是端口撞车**：`/tmp/sp-auto-trial.log` 里那句是决定性的 ——
+
+```
+[sp-room-api] loopback listener unavailable: EADDRINUSE
+```
+
+隔离实例的房间 API 绑不上 5188，因为 **`sp-lan-directory.service`（EasyTier M1 那套的局域网目录）**
+已经占着 `127.0.0.1:5188`（`Environment=SP_LAN_DIRECTORY_PORT=5188`，"5187+1"）。
+于是那次 curl 打到了目录服务上、拿到 200，闸门如实报"未认证却 200"。
+
+时间上说得通：M1 那套是 **10-13 00:49** 装的，晚于 10-11 那次成功部署（那时 5188 还空着）。
+
+**修法**：动**试跑端口**而不是动已在跑的目录服务 —— 目录那侧的 5188 已经扎进 pingap 路由
+（`sp_lan_directory_backend` → `127.0.0.1:5188`）、`patch-pingap.py`、测试断言与 README；
+试跑端口只是升级期间的临时 scratch，改它零运行时影响、不用重启任何常驻服务。
+
+**从此的端口预留表**（新服务选端口先看这张表）：
+
+| 端口 | 归属 | 绑定 |
+|---|---|---|
+| 5150 | 游戏服 `stronghold.service` | 127.0.0.1（另由 socat 桥到 `10.126.126.1:5150`） |
+| 5152 | `sp-dev-test.service`（0.2.1 测试实例） | 127.0.0.1 |
+| 5187 | 房间 API（`sp-room-api` preload，pingap 路由 `/api/bot/v1/`） | 127.0.0.1 |
+| 5188 | 局域网目录 `sp-lan-directory.service`（pingap 路由 `sp_lan_directory_backend`） | 127.0.0.1 |
+| **5198** | **升级脚本隔离验证的试跑房间 API** | 127.0.0.1（仅升级期间） |
+| **5199** | **升级脚本隔离验证的试跑游戏实例** | 127.0.0.1（仅升级期间） |
+| 15888 | EasyTier `--rpc-portal` | 127.0.0.1 |
+| 11010–11013 | EasyTier 监听 | 0.0.0.0（需安全组放行 11010/11011） |
