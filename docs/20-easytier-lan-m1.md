@@ -388,3 +388,61 @@ curl -sS http://127.0.0.1:15150/healthz
 客户端 UI 那层：点「开启联机」→ 拉 sidecar → 状态卡片。它要**管理员权限**建 Wintun 网卡
 （`--no-tun` 那条路走不通 UI，因为客户端就是要那个网卡来让**浏览器**按虚拟 IP 访问）。
 本次实测恰好证明了：**除了建网卡这一步，其余全都不需要管理员**。
+
+---
+
+## 12. ⚠️ 待部署：目录服务现在**看不见玩家自建的服**（已修，未上线）
+
+### 病灶
+
+`sp-lan-directory` 原来**只探 `:5150`**（我们自己的服跑在那个端口，见 §4/§10）。
+但**玩家**照着上游 `docs/DEPLOY.md` 开服会落在游戏默认的 **3000**
+（`server/index.js` 顶部注释、`http/config.js`、DEPLOY.md §2.1 让朋友访问 `http://<主机>:3000`）。
+
+→ 玩家自己开服，房间**不会出现在选服页的联机列表里**。
+而"朋友自己开服、你们直连"正是**唯一量级够大的减负路径**（§0 第 2 条）——
+它会在玩家毫无察觉的情况下静默失效。
+
+### 已修（`979fcb3`，在 `main`，**尚未部署到服务器**）
+
+- `SP_LAN_GAME_PORTS`（逗号分隔）取代单个端口，默认 `5150,3000`；`probePeer` 按序试，
+  返回**应答的那个端口**；`buildDirectory` 把它写进对应 room。
+- **客户端零改动**：`shell/lanRooms.js:55` 本来就用 `room.port` 拼地址。
+- 单元测试 10 → **14** 条（新增一条直接钉住这个 bug），全过；本地冒烟也过。
+
+### 部署（**要重启 `sp-lan-directory` 一个单元**，不碰游戏服）
+
+```bash
+# 1) 传文件（服务器上没有 ops 仓 checkout，所以是拷过去再装）
+scp -i ~/.ssh/lain42.pem \
+  extensions/sp-lan-directory/directory.mjs \
+  extensions/sp-lan-directory/directory.test.mjs \
+  extensions/sp-lan-directory/install.sh \
+  root@lain42.top:/tmp/sp-lan-dir-deploy/
+
+# 2) 装（install.sh 自己会跑 node --test，测试不过就拒绝安装；随后重写单元并 enable --now）
+ssh -i ~/.ssh/lain42.pem root@lain42.top \
+  'bash /tmp/sp-lan-dir-deploy/install.sh --install && rm -rf /tmp/sp-lan-dir-deploy'
+
+# 3) 验收：network 里应出现 ports:[5150,3000]，且官方服仍在
+curl -s https://sp.lain42.top/api/lan/v1/rooms \
+  | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['network']);print([r['virtualIp']+':'+str(r['port']) for r in d['rooms']])"
+```
+
+**为什么可以重启它**：`sp-lan-directory` 是 §8/§10 里那个**只读目录服务**，
+不碰游戏服、不碰 pingap、不碰游戏仓；重启它**不会丢任何对局**（红线针对的是 `stronghold`）。
+服务不可用的那 2 秒里客户端只会拿不到房间列表，不影响进官方服。
+
+**回滚**（一行，也是"纯减法"）：
+
+```bash
+cd <本地 ops 仓> && git show b746269:extensions/sp-lan-directory/directory.mjs > /tmp/directory.mjs
+scp -i ~/.ssh/lain42.pem /tmp/directory.mjs root@lain42.top:/tmp/d/
+ssh -i ~/.ssh/lain42.pem root@lain42.top 'cp /tmp/d/directory.mjs /opt/sp-lan-directory/directory.mjs && systemctl restart sp-lan-directory'
+```
+
+### 紧迫性：**不紧急**（所以可以等人点头）
+
+写这一节时（2026-10-13 19:0x）线上 `peers: 1` —— **还没有任何玩家进过局域网**，
+这个 bug 造成的实际影响**目前是零**。它会在**第一个玩家开服**时开始咬人。
+按 `docs/15` 的规矩，动生产要人点头，所以这里只留命令，不擅自部署。
