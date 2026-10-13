@@ -93,6 +93,37 @@ for (const k of [...keys].sort()) {
   }
 }
 
+// CONCAT_KEYS 是手工维护的，手工清单会烂：站内新增一条 OSS + 'x/y.js' 就悄悄不被覆盖。
+// 所以这里从代码里把"某个名字含 OSS/BASE 的变量 + 字面量"的拼接全抓出来，
+// 凡是长得像资源文件的（.js/.mjs/.wasm/.json）却不在我们探测集合里的，直接算新缺口。
+// 拼接字面量的前缀要能让裸名 `OSS` 也匹配上：写成 `[A-Za-z_][A-Za-z0-9_]*(OSS|…)` 时
+// `OSS + 'wllama/…'` 一条都抓不到（'O' 被首位吃掉后剩余部分对不上分组），
+// 第一版因此只报"1 条"，是个近乎空转的漂移检查 —— 现在前缀用零次。
+const concat = execFileSync(
+  'git',
+  ['-C', REPO, 'grep', '-hI', '-oE', '[A-Za-z0-9_]*(OSS|BASE|Base)[A-Za-z0-9_]* *\\+ *[\'"`][^\'"`]+[\'"`]', '--', '.'],
+  { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }
+);
+const seen = new Set();
+const unpinned = [];
+for (const line of concat.split('\n')) {
+  const m = line.match(/[\'"`]([^\'"`]+)[\'"`]\s*$/);
+  if (!m) continue;
+  const lit = m[1].replace(/^\//, '');
+  if (!/\.(js|mjs|wasm|json)$/i.test(lit)) continue;
+  if (seen.has(lit)) continue;
+  seen.add(lit);
+  // 站内拼出来的字面量是相对 base 的（base 里有 …/wasm/ 也有 …/models/hf/），
+  // 所以只要有任何一条被探测的键以它结尾就算覆盖；否则就是清单漏维护。
+  if (![...keys].some((k) => k === lit || k.endsWith('/' + lit))) unpinned.push(lit);
+}
+if (unpinned.length) {
+  console.error('代码里新出现的拼接键，脚本没覆盖（把 CONCAT_KEYS 补上再切流）：\n  ' + unpinned.join('\n  '));
+  process.exitCode = 1;
+} else {
+  console.log(`拼接清单核对：代码里 ${seen.size} 条资源字面量全部已被覆盖（CONCAT_KEYS ${CONCAT_KEYS.length} 条）`);
+}
+
 console.log(`\n引用 ${keys.size} 条：可达 ${reachable}，已知缺口 ${stillMissing.length}，新缺口 ${newMissing.length}`);
 // 两个方向都要报：新缺口是"又要多坏一页"，被补齐是"这里的清单过期了，删掉它"。
 // 只报前者会让缺口清单永远悄悄烂在里面。
