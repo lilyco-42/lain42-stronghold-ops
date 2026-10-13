@@ -29,10 +29,15 @@ const CONCAT_KEYS = [
   'wasm/wllama/3.6.1/compat/wllama.wasm',
   'wasm/highs/1.15.3/build/highs.mjs',
 ];
-// 已知缺口 = 切流决定还没做的四条。把它们钉在这里，闸门才有意义：
-//   · 出现第五条新缺口 → 红（这才是"漂移检测"）
-//   · 这四条里有任何一条被补齐 → 也红（提醒把这里删掉，否则缺口清单会过期）
-// 决定之后把整个数组清空，这一步就变成"站内引用必须全部可达"的硬闸门。
+// 这四条钉在这里，但性质必须说清：它们**不是"切流才会坏"，是现在已经坏着** ——
+// 旧域名 dl.lain42.top 对这四条全回 403（OSS 账号停用），新桶回 404。
+//   models/hf/catalog.json + wasm/transformers-js/3.8.1/transformers.bundle.mjs → tool/models 页
+//     app.mjs:76 是 fetch(catalog.json, {mode:'cors'})，而 R2 自定义域名不发 CORS 头，
+//     所以这一页光补键不够，**必须先在桶上设 CORS**（这条把 CORS 从"可选"变成硬前置）。
+//   wasm/wllama/3.6.1/compat/{wllama.js,wllama.wasm} → tool/lyco_chat 页（index.html:118-119 setCompat）
+//     上游 npm 与 releases 都没有 compat 产物，只能自己从源码构建（本机不编译，得开一条 lane）；
+//     同页依赖的 index.min.js 新桶已有 200。
+// 闸门语义不变：多出第五条新缺口 → 红；这四条里任何一条被补齐 → 也红并要求删条目。
 const EXPECTED_MISSING = [
   'models/hf/catalog.json',
   'wasm/transformers-js/3.8.1/transformers.bundle.mjs',

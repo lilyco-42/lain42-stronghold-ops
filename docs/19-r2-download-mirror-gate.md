@@ -40,6 +40,11 @@
 - 当前 4 条已知缺口钉在 `EXPECTED_MISSING`：多一条新缺口 → 红；**已知缺口被补齐 → 也红**并要求删条目，
   缺口清单就不会悄悄过期。因此它今天绿，不需要 `|| echo` 那种把死闸门写成绿的写法。
   两个方向都做过变异验证：塞一条不存在的键 → `NEW-MISS` rc=1；把一条可达的塞进清单 → 要求删条目 rc=1。
+- **这 4 条的性质今天纠正了一次：不是"切流会弄坏"，是"已经坏了"。** 旧域名 `dl.lain42.top` 对这四条全部回
+  403（OSS 停用），新桶回 404，所以 `tool/models` 与 `tool/lyco_chat` 两页现在就是坏的，补齐它们属于**修复**。
+  而且 `tool/models/app.mjs:76` 是用 `fetch(catalog.json, {mode:'cors'})` 跨源取目录，
+  R2 自定义域名不发 CORS 头 —— **桶 CORS 因此是这一页恢复的硬前置，不是可选优化**；
+  `compat/wllama.{js,wasm}` 上游没有，只能从 `ngxson/wllama` 源码构建（构建走 lane，不在本机编译）。
 - 带正向对照（`lyco-dl/lyco-windows.zip`，今天整段验过 sha256）：对照拿不到就 rc=3 作废整批结论 ——
   第一版就是靠它发现我自己踩了 `execFile('curl')` + `-o /dev/null` 两个 Windows 坑，15 条全假 404。
 - 必须显式传 Pages 仓库目录（CI 里是 checkout 出来的 `pages`，本机 `D:/Code/lilyco-42.github.io`），
