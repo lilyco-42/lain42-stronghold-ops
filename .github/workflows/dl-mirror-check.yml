@@ -66,10 +66,21 @@ jobs:
           path: pages
           persist-credentials: false
       - name: 切流预检：站内真实引用的路径在新桶上是否可达
-        # 期望值钉死在脚本的 EXPECTED_MISSING（当前 2 条已知缺口）：
-        # 多一条新缺口 → 红；已知缺口被补齐 → 也红（要求删条目，防止缺口清单悄悄过期）。
-        # 所以它不会天天红，也就不需要 || echo 那种把死闸门写成绿的写法。
+        # 期望值钉在脚本的 EXPECTED_MISSING —— 现在这条清单是**空的**（四条缺口都补齐了），
+        # 所以这一步的含义从"除了已知缺口都要可达"升级成"站内引用的每条路径都必须可达"。
+        # 多一条新缺口 → 红；将来有人往清单里塞条目、而那条其实可达 → 也红（要求删条目）。
         run: node scripts/check-cutover-readiness.mjs pages
+      - name: 目录与语料一致性：catalog.json 说的每个文件键都要真取得到且字节相符
+        # 我上传的 catalog.json 是一次性快照（服务器上那份生成器仍写旧域名）。它一旦和语料脱节 ——
+        # 有人重跑同步、改了 revision、误删某个 onnx —— 页面是"拿到目录、下载时 404"，
+        # 而按长度逐个比的验收车道看不出这种错配。这一步专抓三件事：
+        #   1) 页面自己的消费契约（app.mjs:79：schemaVersion/models/runtime.version）
+        #   2) 目录里每个文件键在桶里可取、且实际字节 == 目录声明的字节
+        #   3) runtime.url / wasmBase 里不许再出现已停用的旧域名
+        # 闸门自己带 --selftest 对照（三条都要能红），放在验收之前跑。
+        run: |
+          node scripts/check-hf-catalog.mjs --selftest
+          node scripts/check-hf-catalog.mjs
       - name: 期望表本身要和线上 manifest 对齐（防我改漏）
         # 不要在这一步加 `|| echo '::warning::'`：上一版就是这么写的，脚本因为读不到
         # _staging 的草稿 CSV 直接 ENOENT，却被吞成 step success —— 一道从没跑过的闸门。

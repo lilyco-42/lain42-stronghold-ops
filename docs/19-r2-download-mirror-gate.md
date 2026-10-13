@@ -78,6 +78,16 @@
   第一版就是靠它发现我自己踩了 `execFile('curl')` + `-o /dev/null` 两个 Windows 坑，15 条全假 404。
 - 必须显式传 Pages 仓库目录（CI 里是 checkout 出来的 `pages`，本机 `D:/Code/lilyco-42.github.io`），
   不给就 rc=2：不再默认某个人的绝对路径，那是上一版漂移闸门的死法。
+- **`scripts/check-hf-catalog.mjs`：目录与语料的一致性**（浅车道里多出的一个步骤，不是新车道）。
+  按长度逐个比的验收看不出"目录说的键其实不存在"这种错配，而 `catalog.json` 是一次性快照，
+  所以这里检查的是三者对不对得上：
+  · 页面自己的消费契约（`app.mjs:79`：`schemaVersion==1`、`models` 非空、`runtime.version=='3.8.1'`）；
+  · 目录里每个文件键（`models/hf/<id>/resolve/<rev>/<path>`，与 `remoteHost + remotePathTemplate` 的拼法一致）
+    在桶里取得到，且**实际字节 == 目录声明字节**，另外 `downloadBytes` 要等于该模型 files 之和；
+  · `runtime.url` / `wasmBase` 不许再出现已停用的旧域名 —— 这正是服务器那份生成器下次会写出来的东西。
+  2026-10-13 实测：4 个模型 / 29 个文件全过；`--selftest` 三条对照（取不到的键、尺寸不符、旧域名回归）
+  都能红，且带一个与本项目无关的正向对照键（对照失败就 rc=3 作废，不把探测器的错算成目录的错）。
+  本机跑要加 `NODE_USE_ENV_PROXY=1`（这台机器的 node 默认不走系统代理，直连这个域名会静默卡住）。
 
 两条都跑同一个脚本 `scripts/check-dl-mirror.mjs`，期望值来自 `scripts/dl-mirror-expected.json`。
 
