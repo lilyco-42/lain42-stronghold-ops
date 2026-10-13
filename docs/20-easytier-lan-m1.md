@@ -160,8 +160,19 @@ easytier-cli config-file /tmp/lan.toml     # 或直接写，字段见官方 exam
 | UDP | 11010 | 打洞与连接（UDP 模式，主力） |
 | TCP | 11011 | wss / WireGuard 兜底 |
 
-放行前先验一下现状：从外部 `nc -vz sp.lain42.top 11010` 现在应为拒绝。
-**没放行 = 整个方案不成立**，这是唯一的外部阻塞步骤。
+**✅ 已放行（2026-10-13 外部实测）** —— 这一节从"待办"变成"已办"，留作记录。
+
+验证方法（**本机在 Clash TUN 后面测不准 —— TCP"成功"可能只是本地受理、DNS 会给 fake-IP，
+所以必须用外部测量**）：check-host.net 多点探测，**带对照组**：
+
+| 目标 | 结果 | 判定 |
+|---|---|---|
+| `sp.lain42.top:11010` | 2/3 通（0.57 s / 1.96 s，1 个节点 DNS 抖） | **开** |
+| `sp.lain42.top:11011` | **3/3 通** | **开** |
+| `sp.lain42.top:11999`（对照） | 3/3 `Connection timed out` | 关（证明无假阳性） |
+
+⚠️ **UDP `11010` 仍未验证**（check-host 不支持 UDP）。TCP 通即意味着至少能走 TCP/ws；
+UDP 打洞失败只是退化，不是不可用。
 
 ## 5. 客户端改动（客户端仓，不改游戏仓）
 
@@ -226,7 +237,7 @@ apt-get remove -y socat && rm -rf /etc/easytier /usr/local/bin/easytier-*
 
 ## 9. 待定 / 风险
 
-1. **安全组不放行则全盘不成立**（§4）——唯一硬阻塞。
+1. ~~**安全组不放行则全盘不成立**（§4）~~ —— **已放行**，2026-10-13 外部带对照组实测（§4）。
 2. 网络密码随分享链接分发 = 谁拿到谁进网。可接受（等同房间密码），
    要更严可用 `--secure-mode` + `--credential` 临时凭据，但那是 per-player 管理，M1 不做。
 3. UDP 打洞在校园网/运营商 NAT 下的成功率未实测（本机 Clash TUN 会干扰，测了也不算）。
@@ -250,42 +261,46 @@ apt-get remove -y socat && rm -rf /etc/easytier /usr/local/bin/easytier-*
 ⚠️ `sp-lan-directory` 占的 **5188** 曾与升级脚本的隔离试跑端口撞车，导致 0.2.5 首次自动升级
 失败关闭。端口预留表见 `docs/17-server-auto-upgrade.md` §8 —— **新服务选端口先看那张表**。
 
-### 客户端那一半：已合入，但还没进任何已发布的产物
+### 客户端那一半：**已出厂**（玩家 Release `v0.2.5-c43`，2026-10-13）
 
 - 「一键联机」的客户端侧（Electron + Tauri 两个壳、选服页联机卡片、房间目录消费、
   `GET /servers.json`）与方案文档已合入客户端仓 `main`
   （squash 提交 **`8fb1b55a`**，原 PR #12，5 个提交 / 27 个文件 / +3637）。
 - **方案与三端差距的唯一权威文档在客户端仓 `docs/FREE-LAN.md`**（本文只讲服务端那半，
   不重复它）。要点：Windows ✅ 已落地；Android **能连但一键未做**（手动装 EasyTier +
-  手填 `10.126.126.1:5150` 今天就能用）；iOS ⛔ 做不到（VPN 必须走 Network Extension，
+  手填房主虚拟 IP 今天就能用）；iOS ⛔ 做不到（VPN 必须走 Network Extension，
   要 Apple 签发的 entitlement，未签名 ipa 不可能）。
-- ⚠️ **`SP_LAN_*` 四个 secrets 仍未配置** → `build-clients.yml` / `build-tauri.yml` 走降级分支，
-  打出来的客户端**不含** EasyTier sidecar，选服页不显示联机卡片（这是设计好的 P1，
-  不是故障）。也就是说：**代码在 main 上，但玩家手上的产物里没有。**
+- ✅ **`SP_LAN_*` secrets 已配置**（2026-10-13，三个：NAME / SECRET / PEERS）→
+  两条流水线走 `--require` 分支，产物内确有 sidecar：`easytier-core.exe` 24,395,776 B
+  + `wintun.dll` / `Packet.dll` / `WinDivert64.sys` + `lan-config.json` 253 B
+  （**含真凭据**，CI 只打印 `***`）。
+- ✅ **已发布 `v0.2.5-c43`**（六个形态；匿名 HEAD 6/6、`Content-Length` 与 Release size
+  逐条相等）。相对 c42 的增量 ≈ 6–10 MB/形态，就是 sidecar 压完的大小；
+  **android / ios 不带 sidecar**（它们的体积与 c42 完全一致）。
 
-### 唯一的硬阻塞
+### 阻塞：**已全部解除**
 
-**阿里云安全组入方向放行 TCP/UDP `11010` + TCP `11011`**（§4）。AI 开不了，需要人点。
-**没放行 = 整个内置联机方案不成立**：客户端连不上 `sp.lain42.top:11010` 就组不成网。
+| 曾记的阻塞 | 现状 |
+|---|---|
+| 阿里云安全组放行 `11010` / `11011` | ✅ 已放行（§4，外部带对照组实测） |
+| `SP_LAN_*` secrets 未配 | ✅ 已配（2026-10-13） |
+| 客户端未重切 | ✅ 已发 **`v0.2.5-c43`** |
 
-### 推进顺序（**别跳步**）
+⚠️ 唯一遗留的**未验证项**：**UDP `11010` 打洞成功率**（§9.3）与
+**Windows 真机全流程**（装 → 点「开启联机」→ 列表里出现别人的服）—— 都要人来跑。
 
-1. **先放行安全组**（人来做），从外部验 `nc -vz sp.lain42.top 11010` 应为通。
-2. 再配四个 secrets（`SP_LAN_NETWORK_NAME` / `SP_LAN_NETWORK_SECRET` / `SP_LAN_PEERS`，
-   可选 `SP_LAN_DIRECTORY_URL`）—— 取值见服务器 `/etc/easytier/env` 与 §2.4。
-3. 重切客户端（`cut-payload` 不必换，payload 没变 → 直接 `build-clients` + `build-tauri` →
-   `publish-client`，下一刀是 **c43**）。
-4. Windows 真机全流程验证（装 → 点「开启联机」→ 房间里出现别人的服）。
+### 推进顺序（只剩两步）
 
-> ⚠️ **第 1 步没做完就不要做第 2 步。** 配了 secrets 就会把 sidecar 打进产物，
-> 而节点在公网上不可达 —— 那会发出去一个「有联机按钮、点了连不上」的客户端，
-> 比没有按钮更糟（`build-clients.yml` 里那条注释说的就是这个）。
+1. ~~放行安全组~~ ✅　2. ~~配 secrets~~ ✅　3. ~~重切客户端~~ ✅（`v0.2.5-c43`）
+4. **Windows 真机全流程验证**（装 → 点「开启联机」→ 房间里出现别人的服）。
+   ⚠️ 首次点会要**管理员权限**（建 TUN 网卡）；客户端会把失败原因显示在卡片上，不静默。
+5. 观察 `easytier-cli peer` 的 `tunnel_proto` / `cost`，确认 UDP 打洞是否真通（§9.3）。
 
-### 今天就能用的替代路径（已写进玩家 Release）
+### 另一条独立的路（已写进玩家 Release）
 
-内置联机卡在安全组，但**玩家侧的 ZeroTier 路径现在就能用，不依赖我们任何东西**：
+**玩家侧的 ZeroTier 路径不依赖我们任何东西**，安全组开不开都能用：
 装 ZeroTier 加入同一个虚拟网络 → 选服页手填房主虚拟 IP（自建服默认 `:3000`）。
-已写进客户端 Release `v0.2.5-c42` 正文的「自由联机」一节（2026-10-13）。
+已写进客户端 Release `v0.2.5-c42` / `v0.2.5-c43` 正文的「自由联机」一节（2026-10-13）。
 
 依据（都实测过，别凭印象）：选服页支持手填地址、对**无 scheme 且带端口**的地址做
 `ws://`/`wss://` 双探针（客户端仓 `shell/picker-core.js`）；自建服默认 `PORT 3000` +
