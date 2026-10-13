@@ -19,11 +19,16 @@
 import { execFile } from 'node:child_process';
 import http from 'node:http';
 
+/** The port our own server answers on. Kept as its own knob because everything else is derived
+ *  from it: `SP_LAN_GAME_PORT` is what the deploy sets, `SP_LAN_GAME_PORTS` overrides the list. */
+const PRIMARY_GAME_PORT = Number(process.env.SP_LAN_GAME_PORT ?? 5150);
+
 const CONFIG = {
   port: Number(process.env.SP_LAN_DIRECTORY_PORT ?? 5188),
   bind: process.env.SP_LAN_DIRECTORY_BIND ?? '127.0.0.1',
   cidr: process.env.SP_LAN_CIDR ?? '10.126.126.0/24',
-  gamePort: Number(process.env.SP_LAN_GAME_PORT ?? 5150),
+  gamePort: PRIMARY_GAME_PORT,
+  gamePorts: parsePortList(process.env.SP_LAN_GAME_PORTS, PRIMARY_GAME_PORT),
   cli: process.env.SP_LAN_EASYTIER_CLI ?? '/usr/local/bin/easytier-cli',
   rpcPortal: process.env.SP_LAN_RPC_PORTAL ?? '127.0.0.1:15888',
   cacheMs: Number(process.env.SP_LAN_CACHE_MS ?? 3000),
@@ -31,6 +36,24 @@ const CONFIG = {
   probeConcurrency: Number(process.env.SP_LAN_PROBE_CONCURRENCY ?? 16),
   cliTimeoutMs: Number(process.env.SP_LAN_CLI_TIMEOUT_MS ?? 4000),
 };
+
+/**
+ * Which ports to probe on each peer, in order. `SP_LAN_GAME_PORTS` (comma-separated) wins;
+ * otherwise the primary port **plus the game server's own default**.
+ *
+ * Why the second port: our own server runs on 5150 (an env override), but a **player** who
+ * hosts for their friends follows upstream `docs/DEPLOY.md` — which starts the server on its
+ * default **3000**. Probing only 5150 made every player-hosted room invisible, i.e. the one
+ * case this feature exists for (朋友自己开服、你们直连 → 不经过我们的服务器). The player must not
+ * have to know a port number, so the directory looks at both.
+ */
+export function parsePortList(raw, primary = 5150) {
+  const fromEnv = String(raw ?? '')
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 65535);
+  return [...new Set(fromEnv.length ? fromEnv : [primary, 3000])];
+}
 
 export const SCHEMA_VERSION = 1;
 
@@ -139,16 +162,27 @@ function numOrNull(v) {
   return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
-/** Probe one peer for a Stronghold server. Never throws. */
-export async function probePeer(peer, { port = CONFIG.gamePort, timeoutMs = CONFIG.probeTimeoutMs, fetchImpl = fetch } = {}) {
-  const url = `http://${peer.ip}:${port}/healthz`;
-  try {
-    const res = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs), headers: { accept: 'application/json' } });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null; // unreachable is the normal case for most peers
+/**
+ * Probe one peer for a Stronghold server, trying each port in order.
+ *
+ * Returns `{ port, healthz }` for the **first** port that answers with `ok: true`, or `null`.
+ * Reporting the port is the whole point: the room the picker shows must be dialled on the
+ * port that actually answered, not on a global guess. Never throws — unreachable is the
+ * normal case for most peers, and a peer with nothing on 5150 simply falls through to 3000.
+ */
+export async function probePeer(peer, { ports = CONFIG.gamePorts, timeoutMs = CONFIG.probeTimeoutMs, fetchImpl = fetch } = {}) {
+  for (const port of ports) {
+    const url = `http://${peer.ip}:${port}/healthz`;
+    try {
+      const res = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs), headers: { accept: 'application/json' } });
+      if (!res.ok) continue;
+      const healthz = await res.json();
+      if (healthz && healthz.ok === true) return { port, healthz };
+    } catch {
+      // nothing listening on this port (or it timed out): try the next one
+    }
   }
+  return null;
 }
 
 /** Run `fn` over `items` with a bounded number of concurrent calls, preserving order. */
@@ -180,18 +214,27 @@ export function readPeers({ cli = CONFIG.cli, rpcPortal = CONFIG.rpcPortal, time
 
 /**
  * Build the whole directory document. Exported so tests can drive it with fakes.
- * @param {{peers: any[], selfIp?: string, port?: number, probe?: Function, now?: Date}} o
+ *
+ * `ports` is the list each peer is probed on (see `parsePortList`); `port` is accepted as the
+ * legacy single-port form so an older caller keeps working. Each room reports **the port that
+ * answered for that peer** — the picker dials `virtualIp:room.port`, so a player-hosted server
+ * on 3000 becomes joinable without anyone configuring anything.
+ *
+ * @param {{peers: any[], selfIp?: string, ports?: number[], port?: number, probe?: Function, now?: Date}} o
  */
-export async function buildDirectory({ peers, selfIp = '', port = CONFIG.gamePort, probe = probePeer, now = new Date(), concurrency = CONFIG.probeConcurrency } = {}) {
+export async function buildDirectory({ peers, selfIp = '', ports, port, probe = probePeer, now = new Date(), concurrency = CONFIG.probeConcurrency } = {}) {
+  const probePorts = Array.isArray(ports) && ports.length ? ports : Number.isInteger(port) ? [port] : CONFIG.gamePorts;
   const candidates = peers.filter((p) => inCidr(p.ip, CONFIG.cidr));
-  const healthz = await mapLimit(candidates, concurrency, (p) => probe(p, { port }));
-  const rooms = candidates.map((p, i) => shapeRoom(p, healthz[i], port, { selfIp, now }));
+  const hits = await mapLimit(candidates, concurrency, (p) => probe(p, { ports: probePorts }));
+  const rooms = candidates.map((p, i) => shapeRoom(p, hits[i]?.healthz ?? null, hits[i]?.port ?? probePorts[0], { selfIp, now }));
   rooms.sort((a, b) => Number(b.reachable) - Number(a.reachable) || ipToInt(a.virtualIp) - ipToInt(b.virtualIp));
   return {
     ok: true,
     schemaVersion: SCHEMA_VERSION,
     generatedAt: now.toISOString(),
-    network: { cidr: CONFIG.cidr, port, peers: candidates.length, reachable: rooms.filter((r) => r.reachable).length },
+    // `port` stays as the primary (the official server's) so a reader that only knows that
+    // field still gets a sane answer; `ports` is the full probe list, additive to schema v1.
+    network: { cidr: CONFIG.cidr, port: probePorts[0], ports: probePorts, peers: candidates.length, reachable: rooms.filter((r) => r.reachable).length },
     rooms,
   };
 }
@@ -253,6 +296,6 @@ export function createServer() {
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
   const server = createServer();
   server.listen(CONFIG.port, CONFIG.bind, () => {
-    console.log(`sp-lan-directory listening on http://${CONFIG.bind}:${CONFIG.port} (cidr ${CONFIG.cidr}, game port ${CONFIG.gamePort})`);
+    console.log(`sp-lan-directory listening on http://${CONFIG.bind}:${CONFIG.port} (cidr ${CONFIG.cidr}, game ports ${CONFIG.gamePorts.join(',')})`);
   });
 }

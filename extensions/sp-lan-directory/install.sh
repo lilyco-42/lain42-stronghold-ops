@@ -65,6 +65,10 @@ Environment=SP_LAN_DIRECTORY_PORT=5188
 Environment=SP_LAN_DIRECTORY_BIND=127.0.0.1
 Environment=SP_LAN_CIDR=10.126.126.0/24
 Environment=SP_LAN_GAME_PORT=5150
+# Both ports on purpose: 5150 is ours, 3000 is the game's own default — a player who hosts for
+# their friends follows upstream DEPLOY.md and lands on 3000. Probing only 5150 hid every
+# player-hosted room, which is the case this whole feature exists for. Override to narrow it.
+Environment=SP_LAN_GAME_PORTS=5150,3000
 Environment=SP_LAN_EASYTIER_CLI=/usr/local/bin/easytier-cli
 Environment=SP_LAN_RPC_PORTAL=127.0.0.1:15888
 Restart=on-failure
