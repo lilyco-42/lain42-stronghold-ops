@@ -232,3 +232,62 @@ apt-get remove -y socat && rm -rf /etc/easytier /usr/local/bin/easytier-*
 3. UDP 打洞在校园网/运营商 NAT 下的成功率未实测（本机 Clash TUN 会干扰，测了也不算）。
    上线后以 `easytier-cli peer` 的 `tunnel_proto`/`cost` 列为观测点，实在差再开 TCP 兜底。
 4. `--foreign-relay-bps-limit 262144` 是按「出口剩 ~1 Mbps」拍的，接入量上来后要重估。
+
+---
+
+## 10. 现状、阻塞与推进顺序（2026-10-13 收尾）
+
+### 已经在跑的（服务端，全部零重启游戏服）
+
+| 单元 | 状态 | 监听 |
+|---|---|---|
+| `easytier-lan.service` | active | `0.0.0.0:11010-11013`、`127.0.0.1:15888`（rpc-portal） |
+| `easytier-lan-bridge.service` | active | `10.126.126.1:5150` → `127.0.0.1:5150`（socat） |
+| `sp-lan-directory.service` | active | `127.0.0.1:5188`，pingap 路由 `/api/lan/v1/` |
+
+游戏仓、游戏服、pingap 全程零改动、零重启。回滚是纯减法（§8）。
+
+⚠️ `sp-lan-directory` 占的 **5188** 曾与升级脚本的隔离试跑端口撞车，导致 0.2.5 首次自动升级
+失败关闭。端口预留表见 `docs/17-server-auto-upgrade.md` §8 —— **新服务选端口先看那张表**。
+
+### 客户端那一半：已合入，但还没进任何已发布的产物
+
+- 「一键联机」的客户端侧（Electron + Tauri 两个壳、选服页联机卡片、房间目录消费、
+  `GET /servers.json`）与方案文档已合入客户端仓 `main`
+  （squash 提交 **`8fb1b55a`**，原 PR #12，5 个提交 / 27 个文件 / +3637）。
+- **方案与三端差距的唯一权威文档在客户端仓 `docs/FREE-LAN.md`**（本文只讲服务端那半，
+  不重复它）。要点：Windows ✅ 已落地；Android **能连但一键未做**（手动装 EasyTier +
+  手填 `10.126.126.1:5150` 今天就能用）；iOS ⛔ 做不到（VPN 必须走 Network Extension，
+  要 Apple 签发的 entitlement，未签名 ipa 不可能）。
+- ⚠️ **`SP_LAN_*` 四个 secrets 仍未配置** → `build-clients.yml` / `build-tauri.yml` 走降级分支，
+  打出来的客户端**不含** EasyTier sidecar，选服页不显示联机卡片（这是设计好的 P1，
+  不是故障）。也就是说：**代码在 main 上，但玩家手上的产物里没有。**
+
+### 唯一的硬阻塞
+
+**阿里云安全组入方向放行 TCP/UDP `11010` + TCP `11011`**（§4）。AI 开不了，需要人点。
+**没放行 = 整个内置联机方案不成立**：客户端连不上 `sp.lain42.top:11010` 就组不成网。
+
+### 推进顺序（**别跳步**）
+
+1. **先放行安全组**（人来做），从外部验 `nc -vz sp.lain42.top 11010` 应为通。
+2. 再配四个 secrets（`SP_LAN_NETWORK_NAME` / `SP_LAN_NETWORK_SECRET` / `SP_LAN_PEERS`，
+   可选 `SP_LAN_DIRECTORY_URL`）—— 取值见服务器 `/etc/easytier/env` 与 §2.4。
+3. 重切客户端（`cut-payload` 不必换，payload 没变 → 直接 `build-clients` + `build-tauri` →
+   `publish-client`，下一刀是 **c43**）。
+4. Windows 真机全流程验证（装 → 点「开启联机」→ 房间里出现别人的服）。
+
+> ⚠️ **第 1 步没做完就不要做第 2 步。** 配了 secrets 就会把 sidecar 打进产物，
+> 而节点在公网上不可达 —— 那会发出去一个「有联机按钮、点了连不上」的客户端，
+> 比没有按钮更糟（`build-clients.yml` 里那条注释说的就是这个）。
+
+### 今天就能用的替代路径（已写进玩家 Release）
+
+内置联机卡在安全组，但**玩家侧的 ZeroTier 路径现在就能用，不依赖我们任何东西**：
+装 ZeroTier 加入同一个虚拟网络 → 选服页手填房主虚拟 IP（自建服默认 `:3000`）。
+已写进客户端 Release `v0.2.5-c42` 正文的「自由联机」一节（2026-10-13）。
+
+依据（都实测过，别凭印象）：选服页支持手填地址、对**无 scheme 且带端口**的地址做
+`ws://`/`wss://` 双探针（客户端仓 `shell/picker-core.js`）；自建服默认 `PORT 3000` +
+`HOST '::'`（`server/index.js` 顶部注释）—— 注意我们线上是 `PORT=5150`/`HOST=127.0.0.1`
+的环境变量覆盖，别把线上的值当默认值写进给玩家的说明。
