@@ -46,6 +46,22 @@
   不加这条就成了“安静地退回去”——而整个迁移的失败方式恰好就是这个。对照做过：拿今天的真表跑 PASS，
   把 `notMirrored[0].host` 改成死域名立刻红并指名 `lyco`。
 
+## 预检现在直接读线上清单（2026-10-14，扫出 6 张碎图）
+
+预检原先只看两样：Pages 仓库里的字面 URL、手工维护的 `CONCAT_KEYS`；期望表则只收 manifest 的 `mirror` 字段。
+结果 `items[].icon` 挂在已停用域名上这件事**谁都不报**：6 张 PNG（ghboost / stemscan / simul-overlay /
+cute-pet / mc-remote / mirage-tank）在新桶 404、旧域名 403，而下载页确实渲染 `item.icon` —— 用户现在看到的
+就是 6 个碎图，而三条车道全绿。这就是"绿灯等于覆盖"的又一例。
+
+现在预检会把清单里**所有 URL 字段**扫进探测集合，缺失的条目还会标注来自哪个字段。实测（CI run `38566900702`）：
+清单扫出 25 键，`引用 44 条：可达 32，已知缺口 6，新缺口 0`，`已知缺口 404 downloads/icons/ghboost.png [清单字段：icon]`。
+读清单必须用 curl：这份 manifest 由站上 pingap 0.13.5 直接服务，它同时发 `Content-Length` 和 `Transfer-Encoding`
+（违反 RFC 9112 §6.1），node/undici 的普通 GET 会失败 —— 第一次本机跑就 rc=3 撞上。桶上那些键仍走 node fetch。
+
+6 张图的代价写在 `EXPECTED_MISSING` 旁边：字节只在停用的 OSS 里，服务器上没有 icons 目录，Pages 仓只有
+`assets/logos/ghboost.svg`、`assets/logos/cute-pet.svg` 两个同名但**不同格式不同字节**的素材。所以要么找回/重做
+这 6 张图入库，要么把清单的 icon 字段改成站内本地素材 —— 后者是站内写，要点头。
+
 ## 切流预检（`scripts/check-cutover-readiness.mjs`）
 
 它回答的是另一个问题：**站内代码真会去取的那些路径，新桶里有没有。** 期望表覆盖不到这件事
