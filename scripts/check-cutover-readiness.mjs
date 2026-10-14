@@ -66,7 +66,19 @@ const CONCAT_KEYS = [
 //   配套的 29 个模型文件（839,471,805 B）按 /opt/lain42-model-sync/state.json 里的 pin 逐条校验后上架。
 //   两个已知残留风险写在 docs/19：那份脚本仍硬编码旧域名（下次真发生模型变更时它会生成一份带死域名的目录，
 //   且它的 ossutil 上架那一步会因 OSS 停用而响亮失败，不会静默）；这份 catalog 是一次性快照，不会自己跟着语料变。
-const EXPECTED_MISSING = [];
+const EXPECTED_MISSING = [
+  // 2026-10-14 新扫出来的一类：manifest 的 items[].icon 指在旧域名上，桶里同样是 404。
+  // 字节只在已停用的 OSS 里（6 个都实测 403），服务器上没有副本（/var/www/studio 下无 icons 目录），
+  // Pages 仓只有 ghboost.svg / cute-pet.svg 两个**同名的另一份素材**（svg 不是 png，不是同一字节）。
+  // 所以这不是"补个链接"就能了：要么找到/重做这 6 张图入库，要么把清单里 icon 字段改成站内本地素材。
+  // 用户现在看到的下载页是 6 个碎图，这条记在这里是为了"别忘了它有代价"，不是它不严重。
+  'downloads/icons/ghboost.png',
+  'downloads/icons/stemscan.png',
+  'downloads/icons/simul-overlay.png',
+  'downloads/icons/cute-pet.png',
+  'downloads/icons/mc-remote.png',
+  'downloads/icons/mirage-tank.png',
+];
 // 提取器只认字面 URL，而测试源码习惯把点写成 `\.`` —— 2026-10-13 实测：用字面模式数 Pages 仓得 17 个文件 / 27 处，
 // 允许转义形态后是 20 个文件 / 35 处，少算的 8 处全在 tests/ 里的断言上。测试断言本来就该跟着切流一起翻，
 // 但如果**站内代码**哪天也用转义形态写这个域名，我的提取器就会悄悄漏掉那条键 —— 预检报"全覆盖"而实际漏键。
@@ -102,6 +114,39 @@ const keys = new Set(CONCAT_KEYS);
 for (const line of grep.split('\n')) {
   const m = line.trim().match(/^https:\/\/dl\.lain42\.top\/(.+)$/);
   if (m) keys.add(m[1].replace(/\/+$/, ''));
+}
+
+// 站内代码之外还有一份**线上 manifest** 自己也在引用这些键，而且字段不止 `mirror`：
+// 2026-10-14 就是靠人工才发现 `items[].icon` 有 6 个 PNG 既不在桶里也回 403 —— 那时 mirror 已经全翻新桶，
+// 两张表都只认 mirror/仓库字面量，于是这种"用户页面上一片碎图"谁都不报。所以现在直接扫清单里所有 URL 字段。
+const MANIFEST_URL = 'https://lain42.top/downloads/manifest.json?cb=' + Date.now();
+const fromManifest = new Map(); // key -> 字段名集合
+try {
+  // 用 curl 而不是 node fetch：这份清单由站上的 pingap 0.13.5 直接服务，它同时发 Content-Length 和
+  // Transfer-Encoding（违反 RFC 9112 §6.1），node/undici 的普通 GET 会直接失败，而 curl 一直读得到。
+  // 桶上那些键的探测仍走 node fetch —— Cloudflare 那边没这个问题，别把两条路混成一个。
+  const mf = JSON.parse(
+    execFileSync('curl', ['-sS', '--fail', '--compressed', '--max-time', '30', MANIFEST_URL], {
+      encoding: 'utf8', maxBuffer: 32 * 1024 * 1024,
+    })
+  );
+  const walk = (o, path) => {
+    if (typeof o === 'string') {
+      const mm = o.match(/^https:\/\/(?:dl\.lain42\.top|dl\.lilyco42\.top)\/(.+)$/);
+      if (mm) {
+        const k = mm[1].replace(/\/+$/, '');
+        if (!fromManifest.has(k)) fromManifest.set(k, new Set());
+        fromManifest.get(k).add(path);
+      }
+    } else if (Array.isArray(o)) o.forEach((v) => walk(v, path));
+    else if (o && typeof o === 'object') for (const [k2, v] of Object.entries(o)) walk(v, k2);
+  };
+  walk(mf, '');
+  for (const k of fromManifest.keys()) keys.add(k);
+  console.log(`线上清单扫出 ${fromManifest.size} 个键（字段含 mirror/icon 等），并入探测集合`);
+} catch (e) {
+  console.error('取不到线上 manifest → 这一轮的"清单侧引用"没验到，结论不完整：' + String(e.message || e).slice(0, 120));
+  process.exitCode = process.exitCode || 3;
 }
 
 const probe = async (k) => {
@@ -152,7 +197,8 @@ for (const k of [...keys].sort()) {
     console.log(`（前缀，不是文件）${String(p.code).padEnd(4)} ${k}`);
   } else if (EXPECTED_MISSING.includes(k)) {
     stillMissing.push(k);
-    console.log(`已知缺口 ${String(p.code).padEnd(4)} ${k}`);
+    const src = fromManifest.get(k) ? `  [清单字段：${[...fromManifest.get(k)].join(',')}]` : '';
+    console.log(`已知缺口 ${String(p.code).padEnd(4)} ${k}${src}`);
   } else {
     newMissing.push(k);
     console.log(`NEW-MISS ${String(p.code).padEnd(4)} ${k}`);
