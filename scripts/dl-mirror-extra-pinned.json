@@ -2,6 +2,14 @@
   "note": "manifest 与 csv 两张表都覆盖不到的键：站内代码拼出来的路径（不在下载清单里，也不在当年那份 csv 里）。这一类补一份就钉一份，来源写清楚，否则它和手工清单一样会烂。models/hf/* 那 30 条的权威 pin 在服务器 /opt/lain42-model-sync/state.json：LFS 大文件是整文件 sha256、非 LFS 小文件是 git-blob-sha1，两者都逐条验过才上架；这里的 sha256 对同一份字节现算，CI 用它做整段比对。",
   "rows": [
     {
+      "key": "lyco-dl/lyco-windows.zip",
+      "size": 4539333,
+      "sha256": "6538286b3c291291f9027ba1d450e46fa05eca21d2576572adad3b370a929cda",
+      "ct": "application/zip",
+      "src": "pin:站内 manifest（2026-10-14 该条 mirror 回源站 lain42.top，桶里对象仍在）",
+      "why": "这条原本是 manifest 项，因为 mirror 主机不是桶的域名而被生成器归进 notMirrored，于是脱离了每日验收。桶里那份对象并没有消失，而且当天就是靠它当切流预检的正向对照；深车道 --deep all 已把它整段哈希与这个 pin 对上，所以补进 extra 继续钉着 —— 否则镜面对象反而没人验了。"
+    },
+    {
       "key": "wasm/wllama/3.6.1/compat/wllama.js",
       "size": 170982,
       "sha256": "97f88f7bf26b17ead6be6e7c0c39d20e21661e71827eb5e3c9a468667fc249f5",

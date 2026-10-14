@@ -33,10 +33,27 @@ const manifest = JSON.parse(
 );
 
 const rows = [];
+// mirror 主机不是桶的域名 = 这条还没走镜像，桶里没有对象可验。
+// 2026-10-14 实测：站内 20 条 mirror 里 18 条已翻到 dl.lilyco42.top，2 条（lyco、lyco-jev）暂时回源站 lain42.top，
+// 死域名 dl.lain42.top 已经 0 条。把"回源站"当成"桶里的键缺失"来报红是错的 —— 天天红的闸门等于没有闸门；
+// 但也不能当没看见，所以单独记在 notMirrored 里，让它显式、可比对、可数。
+const notMirrored = [];
 for (const it of manifest.items) {
   const m = it.mirror;
   if (!m || !m.url) continue;
-  const key = new URL(m.url).pathname.replace(/^\//, '');
+  const u = new URL(m.url);
+  const key = u.pathname.replace(/^\//, '');
+  if (u.host !== 'dl.lilyco42.top') {
+    notMirrored.push({
+      id: it.id,
+      host: u.host,
+      key,
+      size: Number(m.size) || 0,
+      sha256: m.sha256 ? String(m.sha256) : null,
+      note: 'mirror 仍回源站（不是死域名），所以这条不进桶验收',
+    });
+    continue;
+  }
   rows.push({
     key,
     size: Number(m.size) || 0,
@@ -79,11 +96,11 @@ const out = {
     '（见 dl-mirror-csv-sha.json / pin-csv-assets.mjs）。两类强度的来源不同，但都到了字节级；csv 那条不能声称与某个权威上游一致，' +
     '因为这些 npm/包文件本身没有存哈希的清单。extra 项（dl-mirror-extra-pinned.json）是站内拼出来、两张表都不覆盖的键，' +
     '哈希取自上游发布物本身，强度最高。',
-  knownGaps: [
-    { id: 'lyco-jev', why: 'manifest 钉 623029300 B / 3947c93b…，这份字节在所有可及面上都没有了（检索已穷尽，不是猜的）：服务器与本机按精确尺寸全盘 find 无命中；仓库无 Release/tag；27 个 app-debug 产物中 ≥100MB 的 7 个用绝对 Range 读中央目录，内层 APK 是 666.7M×3 / 1155.6M×3 / 1199M，没有 623029300；另两个桶的 4 个候选键全 404。源站现文件是另一个 build：1155579350 B / sha256 3b47b18b…（就地算的），境内实测 206/30 ms、类型正确 → 改链接技术上可用，但换的是 build、与 pin 冲突，等用户决定重钉' },
-    // cute-pet 不再是 gap：pin 那份字节在服务器 /tmp 里还活着（2026-10-03 的副本，
-    // sha256 801aa079… 与 manifest 逐字节相同），已 scp→校验→灌进 R2→回读校验→公网两种客户端复验。
-  ],
+  knownGaps: [],
+  // 2026-10-14：lyco-jev 这条"等用户决定重钉"已经由站内自己解决了 —— manifest 现在自己钉
+  // 1,155,579,350 B / 3b47b18b…（就是我量出来的源站那份 build），并把 mirror 指向源站而非死域名。
+  // 所以它不再是"pin 冲突的缺口"，改记在 notMirrored（桶里没有它）。
+  notMirrored,
   items: rows,
 };
 writeFileSync(here + 'dl-mirror-expected.json', JSON.stringify(out, null, 2) + '\n', 'utf8');

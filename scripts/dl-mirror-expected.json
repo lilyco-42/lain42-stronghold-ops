@@ -1,21 +1,26 @@
 {
   "base": "https://dl.lilyco42.top",
   "note": "manifest 项的 sha256 来自下载站清单本身；csv 项的 sha256 来自\"本机当年上传的源文件\"与\"R2 现对象\"双向计算相等（见 dl-mirror-csv-sha.json / pin-csv-assets.mjs）。两类强度的来源不同，但都到了字节级；csv 那条不能声称与某个权威上游一致，因为这些 npm/包文件本身没有存哈希的清单。extra 项（dl-mirror-extra-pinned.json）是站内拼出来、两张表都不覆盖的键，哈希取自上游发布物本身，强度最高。",
-  "knownGaps": [
+  "knownGaps": [],
+  "notMirrored": [
     {
-      "id": "lyco-jev",
-      "why": "manifest 钉 623029300 B / 3947c93b…，这份字节在所有可及面上都没有了（检索已穷尽，不是猜的）：服务器与本机按精确尺寸全盘 find 无命中；仓库无 Release/tag；27 个 app-debug 产物中 ≥100MB 的 7 个用绝对 Range 读中央目录，内层 APK 是 666.7M×3 / 1155.6M×3 / 1199M，没有 623029300；另两个桶的 4 个候选键全 404。源站现文件是另一个 build：1155579350 B / sha256 3b47b18b…（就地算的），境内实测 206/30 ms、类型正确 → 改链接技术上可用，但换的是 build、与 pin 冲突，等用户决定重钉"
-    }
-  ],
-  "items": [
-    {
+      "id": "lyco",
+      "host": "lain42.top",
       "key": "lyco-dl/lyco-windows.zip",
       "size": 4539333,
       "sha256": "6538286b3c291291f9027ba1d450e46fa05eca21d2576572adad3b370a929cda",
-      "ct": "application/zip",
-      "src": "manifest",
-      "id": "lyco"
+      "note": "mirror 仍回源站（不是死域名），所以这条不进桶验收"
     },
+    {
+      "id": "lyco-jev",
+      "host": "lain42.top",
+      "key": "lyco-jev-dl/lyco-jev-android-arm64.apk",
+      "size": 1155579350,
+      "sha256": "3b47b18b592fb4d530265d38abe44b0afe3f312ae8e10e48b710ef46a2ee4b77",
+      "note": "mirror 仍回源站（不是死域名），所以这条不进桶验收"
+    }
+  ],
+  "items": [
     {
       "key": "downloads/clash-verge-rev/v2.5.2/Clash.Verge_2.5.2_x64-setup.exe",
       "size": 46964366,
@@ -89,14 +94,6 @@
       "id": "lyco-router-v13"
     },
     {
-      "key": "downloads/lyco-jev/lyco-jev-android-arm64.apk",
-      "size": 623029300,
-      "sha256": "3947c93b56c1cfa62a597db52736ef31c2776fd57ba79106aeae0e6c4c4a8b42",
-      "ct": "application/vnd.android.package-archive",
-      "src": "manifest",
-      "id": "lyco-jev"
-    },
-    {
       "key": "downloads/nekobox/1.4.2/NekoBox-1.4.2-arm64-v8a.apk",
       "size": 15252519,
       "sha256": "d01e76feeb05e4701f3ae382cb71c0a3ebb77039005e5893f8817e1051f8ac28",
@@ -167,22 +164,6 @@
       "ct": "application/vnd.android.package-archive",
       "src": "manifest",
       "id": "mirage-tank"
-    },
-    {
-      "key": "downloads/stronghold-protocol/0.1.3-c11/StrongholdProtocol-desktop-win-x64-0.1.3-c11.zip",
-      "size": 360850482,
-      "sha256": "ac73d722bd1b75076c9dc862166c4ff2b4c079a7019fb24f9f184e6ea774e430",
-      "ct": "application/zip",
-      "src": "manifest",
-      "id": "stronghold-protocol-windows"
-    },
-    {
-      "key": "downloads/stronghold-protocol/0.1.3-c11/Stronghold-0.1.3-c11-android-debug.apk",
-      "size": 232320951,
-      "sha256": "59efc557e709410cc96499f1139a2e5b8ef9e1a0e7c04509181fe9e68519a1fc",
-      "ct": "application/vnd.android.package-archive",
-      "src": "manifest",
-      "id": "stronghold-protocol-android"
     },
     {
       "key": "wasm/lilyco-clang/e19dc5c/browsercc-index.js",
@@ -447,6 +428,14 @@
       "ct": "application/javascript",
       "src": "csv",
       "id": "wasm/opencv/4.13.0/opencv.js"
+    },
+    {
+      "key": "lyco-dl/lyco-windows.zip",
+      "size": 4539333,
+      "sha256": "6538286b3c291291f9027ba1d450e46fa05eca21d2576572adad3b370a929cda",
+      "ct": "application/zip",
+      "src": "extra",
+      "id": "lyco-dl/lyco-windows.zip"
     },
     {
       "key": "wasm/wllama/3.6.1/compat/wllama.js",

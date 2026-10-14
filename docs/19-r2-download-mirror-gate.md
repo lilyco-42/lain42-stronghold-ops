@@ -27,6 +27,25 @@
 浅车道现在有**三个**触发源：4 个 cron 槽位（冗余）、`workflow_run`（父 `sp-room-api`）、以及进 main 的提交
 （`paths` 限定 `scripts/**`、本文档与它自己的 YAML —— 让"改了检查逻辑"必然被自己验一遍）。
 
+## 镜像当前真实状态（2026-10-14 实测，别再按旧数字说话）
+
+线上 `downloads/manifest.json` 共 113 条条目，其中 **20 条有 mirror**，按主机分：
+
+| mirror 主机 | 条数 | 含义 |
+|---|---|---|
+| `dl.lilyco42.top` | 18 | 已走 R2 镜像，每天验收 |
+| `lain42.top` | 2 | `lyco`、`lyco-jev` 暂时回源站（源站本身是快的，境内实测 206 / 30 ms） |
+| `dl.lain42.top` | **0** | 已停用的 OSS —— 死域名引用清零 |
+
+两条后果，都已在闸门里体现：
+· 浅车道从 91 键变成 **89 键**（18 manifest + 33 csv + 38 extra，`knownGaps` 0 条，89 键全部带 sha256）。
+· `lyco-dl/lyco-windows.zip` 因为 mirror 回源站而脱离 manifest 覆盖，但桶里那份对象还在、而且正是切流预检的
+  正向对照 —— 所以按“补一个就钉一个”把它补进 extra，别出现“镜面对象反而没人验”。深车道当天证过它整段哈希
+  与 manifest 的 pin 一致，这个补钉不是凭印象。
+· 新增一条反向断言：**若任何 mirror 退回 `dl.lain42.top` 就直接红**。那种条目会被归进 `notMirrored` 而不进桶验收，
+  不加这条就成了“安静地退回去”——而整个迁移的失败方式恰好就是这个。对照做过：拿今天的真表跑 PASS，
+  把 `notMirrored[0].host` 改成死域名立刻红并指名 `lyco`。
+
 ## 切流预检（`scripts/check-cutover-readiness.mjs`）
 
 它回答的是另一个问题：**站内代码真会去取的那些路径，新桶里有没有。** 期望表覆盖不到这件事
@@ -103,7 +122,9 @@
 
 ## 期望表的三类来源（强度不同，别说混）
 
-- **manifest 项（22 条）**：期望值取自 `https://lain42.top/downloads/manifest.json` 的 `mirror.{url,size,sha256}`。
+- **manifest 项（现在 18 条）**：期望值取自 `https://lain42.top/downloads/manifest.json` 的 `mirror.{url,size,sha256}`。
+  2026-10-14 起只收 **mirror 主机就是桶域名**的条目 —— 清单里还有 2 条（`lyco`、`lyco-jev`）的 mirror 暂时回源站
+  `lain42.top`，桶里没有对应对象可验，它们被显式记进 `notMirrored` 而不是被当成缺失。
   这条能声称"与第三方清单一致"。每次生成表都会重新抓线上清单，所以站内加了新条目、改了尺寸，
   第二步的 `git diff --exit-code` 会红 —— 那是设计意图。
 - **csv 项（33 条）**：2026-09-28 那批 npm/wasm 包，从来没有存哈希的清单。
@@ -120,7 +141,11 @@
   · `models/hf/*` 三十条 = 权威 pin 来自服务器 `/opt/lain42-model-sync/state.json`（LFS 文件是整文件 sha256，
     非 LFS 是 git-blob-sha1），逐条对上才上架，所以这三十条是**真还原**。
 
-已知待定 `knownGaps` 只剩 1 条，表里写清了理由，脚本会 SKIP 它们并保证 `checked == items - skipped`（防止
+**`knownGaps` 现在是 0 条**（2026-10-14）。原来看似无解的那条 `lyco-jev` 由站内自己解决了：manifest 已经把它重钉成
+源站现物的 `1,155,579,350 B / 3b47b18b…`（就是我量出来并列为“换 build”选项的那份），并把 mirror 指向源站而不是死域名。
+所以它不再是 pin 冲突，也不需要我等的决定了；下面那节“检索已穷尽”保留下来当**方法记录**，但结论已被今天的事实推翻。
+
+曾经的行为是：表里写清理由，脚本会 SKIP 它们并保证 `checked == items - skipped`（防止
 "全表被清空也显示全绿"）：
 
 - `lyco-jev`：manifest 钉 623,029,300 B / `3947c93b…`，那份字节只在停用的 OSS 里 —— 服务器与本机都按**精确尺寸**
@@ -135,7 +160,7 @@ sha256 `801aa079…` 与 manifest 逐字节相同）。链路是 scp 回本机 �
 `lain42-dl/downloads/cute-pet/0.3.5/cute-pet-shell.apk` → 回读 sha256 一致 → 公网整段 GET（严格客户端）与
 Range 各验一次 → 境内整段下载 42,715,247 B / 11.7 s / 3.6 MB/s。服务器那份 `/tmp` 副本不是我的，没有删。
 
-## `lyco-jev`：找回 pin 那份字节的检索已经穷尽（附可复现做法）
+## `lyco-jev`：找回 pin 那份字节的检索已经穷尽（方法记录；2026-10-14 站内已改钉新 build，此节结论作废）
 
 结论：manifest 钉的 623,029,300 B / `3947c93b…` 在我能碰到的每个面上都不存在了。这不是推测，逐面测过：
 
